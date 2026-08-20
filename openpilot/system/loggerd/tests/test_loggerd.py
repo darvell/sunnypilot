@@ -315,15 +315,20 @@ class TestLoggerd(OpenpilotTestCase):
     segment_dir = self._get_latest_log_dir()
     assert getxattr(segment_dir, PRESERVE_ATTR_NAME) is None
 
-  @parameterized.expand([True, False])
-  def test_record_front(self, record_front):
+  @parameterized.expand([
+    (True, False),
+    (False, False),
+    (True, True),
+  ])
+  def test_record_front(self, record_front, disable_driver_monitoring):
     params = Params()
     params.put_bool("RecordFront", record_front, block=True)
+    params.put_bool("DisableDriverMonitoring", disable_driver_monitoring, block=True)
 
     self._publish_camera_and_audio_messages()
 
     cabin_hevc_exists = os.path.exists(os.path.join(self._get_latest_log_dir(), 'dcamera.hevc'))
-    assert cabin_hevc_exists == record_front
+    assert cabin_hevc_exists == (record_front and not disable_driver_monitoring)
 
   @parameterized.expand([True, False])
   def test_record_audio(self, record_audio):

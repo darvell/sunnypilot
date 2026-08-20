@@ -24,6 +24,17 @@ from openpilot.common.hardware.hw import Paths
 from openpilot.sunnypilot.system.params_migration import run_migration
 
 
+def configure_driver_monitoring(params: Params) -> None:
+  if params.get_bool("DisableDriverMonitoring"):
+    # camerad reads this before its static camera configuration is initialized.
+    os.environ["DISABLE_DRIVER"] = "1"
+    params.put_bool("RecordFront", False, block=True)
+    params.put_bool("IsDriverViewEnabled", False, block=True)
+    params.remove("DriverTooDistracted")
+  else:
+    os.environ.pop("DISABLE_DRIVER", None)
+
+
 def manager_init() -> None:
   save_bootlog()
 
@@ -58,6 +69,8 @@ def manager_init() -> None:
     default_value = params.get_default_value(k)
     if default_value is not None and params.get(k) is None:
       params.put(k, default_value, block=True)
+
+  configure_driver_monitoring(params)
 
   # Create folders needed for msgq
   try:

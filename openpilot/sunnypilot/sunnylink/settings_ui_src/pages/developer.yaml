@@ -101,6 +101,16 @@ sections:
     title: Show Advanced Controls
     description: Toggle visibility of advanced sunnypilot controls. This only changes the visibility of the toggles; it does
       not change the actual enabled/disabled state.
+  - key: DisableDriverMonitoring
+    widget: toggle
+    needs_onroad_cycle: true
+    title: 'Lab: Disable Cabin Camera and Driver Monitoring'
+    description: Fully disables the cabin camera sensor, driver-monitoring processes, alerts, lockouts, and recording. Normal
+      lateral and longitudinal controls remain available.
+    visibility:
+    - $ref: '#/macros/advanced_only'
+    enablement:
+    - $ref: '#/macros/not_engaged'
   - key: EnableGithubRunner
     widget: toggle
     title: GitHub Runner Service

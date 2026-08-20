@@ -199,6 +199,10 @@ class TogglesLayout(Widget):
 
     self._update_experimental_mode_icon()
 
+    dm_controls_visible = not ui_state.disable_driver_monitoring
+    self._toggles["AlwaysOnDM"].set_visible(dm_controls_visible)
+    self._toggles["RecordFront"].set_visible(dm_controls_visible)
+
     # TODO: make a param control list item so we don't need to manage internal state as much here
     # refresh toggles from params to mirror external changes
     for param in self._toggle_defs:

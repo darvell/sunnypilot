@@ -74,6 +74,8 @@ class TogglesLayoutMici(NavScroller):
     )
 
     enable_openpilot.set_enabled(lambda: not ui_state.engaged)
+    always_on_dm_toggle.set_visible(lambda: not ui_state.disable_driver_monitoring)
+    record_front.set_visible(lambda: not ui_state.disable_driver_monitoring)
     record_front.set_enabled(False if ui_state.params.get_bool("RecordFrontLock") else (lambda: not ui_state.engaged))
     record_mic.set_enabled(lambda: not ui_state.engaged)
 

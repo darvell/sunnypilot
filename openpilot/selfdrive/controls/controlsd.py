@@ -34,6 +34,7 @@ ACTUATOR_FIELDS = tuple(car.CarControl.Actuators.schema.fields.keys())
 class Controls(ControlsExt):
   def __init__(self) -> None:
     self.params = Params()
+    self.disable_driver_monitoring = self.params.get_bool("DisableDriverMonitoring")
     cloudlog.info("controlsd is waiting for CarParams")
     self.CP = messaging.log_from_bytes(self.params.get("CarParams", block=True), car.CarParams)
     cloudlog.info("controlsd got CarParams")
@@ -43,10 +44,11 @@ class Controls(ControlsExt):
 
     self.CI = interfaces[self.CP.carFingerprint](self.CP, self.CP_SP)
 
+    ignore_dm = ['driverMonitoringState'] if self.disable_driver_monitoring else []
     self.sm = messaging.SubMaster(['lateralDelay', 'vehicleParameters', 'lateralTorqueParameters', 'modelV2', 'selfdriveState',
                                    'extrinsicsCalibration', 'deviceMotion', 'longitudinalPlan', 'lateralManeuverPlan', 'carState', 'carOutput',
                                    'driverMonitoringState', 'onroadEvents', 'driverAssistance'] + self.sm_services_ext,
-                                  poll='selfdriveState')
+                                  poll='selfdriveState', ignore_alive=ignore_dm, ignore_avg_freq=ignore_dm, ignore_valid=ignore_dm)
     self.pm = messaging.PubMaster(['carControl', 'controlsState'] + self.pm_services_ext)
 
     self.steer_limited_by_safety = False
@@ -219,11 +221,11 @@ class Controls(ControlsExt):
     cs.upAccelCmd = float(self.LoC.pid.p)
     cs.uiAccelCmd = float(self.LoC.pid.i)
     cs.ufAccelCmd = float(self.LoC.pid.f)
-    cs.forceDecel = bool(self.sm['driverMonitoringState'].noResponseForceDecel or
-                         (self.sm['selfdriveState'].state == State.softDisabling))
+    dm_force_decel = False if self.disable_driver_monitoring else self.sm['driverMonitoringState'].noResponseForceDecel
+    cs.forceDecel = bool(dm_force_decel or (self.sm['selfdriveState'].state == State.softDisabling))
 
     # trigger the car's stock driver monitoring escalation
-    CC.driverMonitoringEscalation = cs.forceDecel
+    CC.driverMonitoringEscalation = False if self.disable_driver_monitoring else cs.forceDecel
 
     lat_tuning = self.CP.lateralTuning.which()
     if self.CP.steerControlType == car.CarParams.SteerControlType.angle:

@@ -1598,7 +1598,14 @@
               "key": "AlwaysOnDM",
               "widget": "toggle",
               "title": "Always-On Driver Monitoring",
-              "description": "Enable driver monitoring even when sunnypilot is not engaged."
+              "description": "Enable driver monitoring even when sunnypilot is not engaged.",
+              "visibility": [
+                {
+                  "type": "param",
+                  "key": "DisableDriverMonitoring",
+                  "equals": false
+                }
+              ]
             },
             {
               "key": "IsMetric",
@@ -1618,7 +1625,14 @@
               "widget": "toggle",
               "needs_onroad_cycle": true,
               "title": "Record and Upload Driver Camera",
-              "description": "Upload data from the driver facing camera and help improve the driver monitoring algorithm."
+              "description": "Upload data from the driver facing camera and help improve the driver monitoring algorithm.",
+              "visibility": [
+                {
+                  "type": "param",
+                  "key": "DisableDriverMonitoring",
+                  "equals": false
+                }
+              ]
             },
             {
               "key": "RecordAudio",
@@ -1943,6 +1957,25 @@
               "widget": "toggle",
               "title": "Show Advanced Controls",
               "description": "Toggle visibility of advanced sunnypilot controls. This only changes the visibility of the toggles; it does not change the actual enabled/disabled state."
+            },
+            {
+              "key": "DisableDriverMonitoring",
+              "widget": "toggle",
+              "needs_onroad_cycle": true,
+              "title": "Lab: Disable Cabin Camera and Driver Monitoring",
+              "description": "Fully disables the cabin camera sensor, driver-monitoring processes, alerts, lockouts, and recording. Normal lateral and longitudinal controls remain available.",
+              "visibility": [
+                {
+                  "type": "param",
+                  "key": "ShowAdvancedControls",
+                  "equals": true
+                }
+              ],
+              "enablement": [
+                {
+                  "type": "not_engaged"
+                }
+              ]
             },
             {
               "key": "EnableGithubRunner",

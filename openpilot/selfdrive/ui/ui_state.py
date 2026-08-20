@@ -40,6 +40,8 @@ class UIState(UIStateSP):
   def _initialize(self):
     UIStateSP.__init__(self)
     self.params = Params()
+    self.disable_driver_monitoring: bool = self.params.get_bool("DisableDriverMonitoring")
+    ignore_dm = ["driverMonitoringState", "driverStateV2"] if self.disable_driver_monitoring else []
     self.sm = messaging.SubMaster(
       [
         "modelV2",
@@ -64,7 +66,10 @@ class UIState(UIStateSP):
         "vehicleParameters",
         "testJoystick",
         "rawAudioData",
-      ] + self.sm_services_ext
+      ] + self.sm_services_ext,
+      ignore_alive=ignore_dm,
+      ignore_avg_freq=ignore_dm,
+      ignore_valid=ignore_dm,
     )
 
     self.prime_state = PrimeState()
@@ -214,6 +219,7 @@ class UIState(UIStateSP):
     self.recording_audio = self.params.get_bool("RecordAudio") and self.started
     self.is_metric = self.params.get_bool("IsMetric")
     self.always_on_dm = self.params.get_bool("AlwaysOnDM")
+    self.disable_driver_monitoring = self.params.get_bool("DisableDriverMonitoring")
     self.experimental_mode = self.params.get_bool("ExperimentalMode")
     self.experimental_mode_confirmed = self.params.get_bool("ExperimentalModeConfirmed")
     # keep usbgpu UI active until offroad transition when gpu disappears

@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 
 from openpilot.selfdrive.ui.ui_state import ui_state
+from openpilot.selfdrive.ui.layouts.settings.common import restart_needed_callback
 from openpilot.selfdrive.ui.layouts.settings.developer import DeveloperLayout
 from openpilot.common.hardware import PC
 from openpilot.common.hardware.hw import Paths
@@ -50,9 +51,16 @@ class DeveloperLayoutSP(DeveloperLayout):
 
     self.prebuilt_toggle = toggle_item_sp(tr("Quickboot Mode"), "", param="QuickBootToggle", callback=self._on_prebuilt_toggled)
 
+    self.disable_driver_monitoring_toggle = toggle_item_sp(
+      tr("Lab: Disable Cabin Camera and Driver Monitoring"),
+      tr("Fully disables the cabin camera sensor, driver-monitoring processes, alerts, lockouts, and recording. ") +
+      tr("Normal lateral and longitudinal controls remain available. Requires an onroad cycle."),
+      param="DisableDriverMonitoring", callback=restart_needed_callback)
+
     self.error_log_btn = button_item(tr("Error Log"), tr("VIEW"), tr("View the error log for sunnypilot crashes."), callback=self._on_error_log_clicked)
 
-    self.items: list = [self.show_advanced_controls, self.enable_github_runner_toggle, self.enable_copyparty_toggle, self.prebuilt_toggle, self.error_log_btn,]
+    self.items: list = [self.show_advanced_controls, self.disable_driver_monitoring_toggle, self.enable_github_runner_toggle,
+                        self.enable_copyparty_toggle, self.prebuilt_toggle, self.error_log_btn,]
 
   @staticmethod
   def _on_prebuilt_toggled(state):
@@ -101,6 +109,8 @@ class DeveloperLayoutSP(DeveloperLayout):
     else:
       self.prebuilt_toggle.set_description(tr("Quickboot mode requires updates to be disabled.<br>Enable 'Disable Updates' in the Software panel first."))
 
+    self.disable_driver_monitoring_toggle.set_visible(show_advanced)
+    self.disable_driver_monitoring_toggle.action_item.set_enabled(lambda: not ui_state.engaged)
     self.enable_copyparty_toggle.set_visible(show_advanced)
     self.enable_github_runner_toggle.set_visible(show_advanced and not self._is_release_branch)
     self.error_log_btn.set_visible(not self._is_release_branch)

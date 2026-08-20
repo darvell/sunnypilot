@@ -10,7 +10,7 @@ from openpilot.common.test import OpenpilotTestCase
 from openpilot.common.params import Params
 import openpilot.system.manager.manager as manager
 from openpilot.system.manager.process import ensure_running
-from openpilot.system.manager.process_config import managed_processes, procs
+from openpilot.system.manager.process_config import driver_monitoring, managed_processes, procs
 from openpilot.common.hardware import HARDWARE
 
 os.environ['FAKEUPLOAD'] = "1"
@@ -32,6 +32,39 @@ class TestManager(OpenpilotTestCase):
 
   def test_duplicate_procs(self):
     assert len(procs) == len(managed_processes), "Duplicate process names"
+
+  def test_disable_driver_monitoring_configuration(self):
+    params = Params()
+    params.put_bool("DisableDriverMonitoring", True, block=True)
+    params.put_bool("AlwaysOnDM", True, block=True)
+    params.put_bool("RecordFrontLock", True, block=True)
+    params.put_bool("RecordFront", True, block=True)
+    params.put_bool("IsDriverViewEnabled", True, block=True)
+    params.put_bool("DriverTooDistracted", True, block=True)
+
+    manager.configure_driver_monitoring(params)
+
+    assert os.environ["DISABLE_DRIVER"] == "1"
+    assert params.get_bool("AlwaysOnDM")
+    assert params.get_bool("RecordFrontLock")
+    assert not params.get_bool("RecordFront")
+    assert not params.get_bool("IsDriverViewEnabled")
+    assert params.get("DriverTooDistracted") is None
+
+    params.put_bool("DisableDriverMonitoring", False, block=True)
+    manager.configure_driver_monitoring(params)
+    assert "DISABLE_DRIVER" not in os.environ
+
+  def test_driver_monitoring_process_predicate(self):
+    params = Params()
+    CP = car.CarParams.new_message()
+    params.put_bool("DisableDriverMonitoring", False, block=True)
+    assert driver_monitoring(True, params, CP)
+
+    params.put_bool("DisableDriverMonitoring", True, block=True)
+    params.put_bool("IsDriverViewEnabled", True, block=True)
+    assert not driver_monitoring(True, params, CP)
+    assert not driver_monitoring(False, params, CP)
 
   def test_blacklisted_procs(self):
     # TODO: ensure there are blacklisted procs until we have a dedicated test

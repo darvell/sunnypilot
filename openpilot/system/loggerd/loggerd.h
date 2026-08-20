@@ -113,7 +113,7 @@ const EncoderInfo main_wide_road_encoder_info = {
 const EncoderInfo main_cabin_encoder_info = {
   .publish_name = "cabinEncodeData",
   .filename = "dcamera.hevc",
-  .record = Params().getBool("RecordFront"),
+  .record = Params().getBool("RecordFront") && !Params().getBool("DisableDriverMonitoring"),
   .get_settings = [](int in_width){return EncoderSettings::MainEncoderSettings(in_width);},
   INIT_ENCODE_FUNCTIONS(CabinEncode),
 };

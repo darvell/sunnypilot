@@ -28,6 +28,10 @@ sections:
     widget: toggle
     title: Always-On Driver Monitoring
     description: Enable driver monitoring even when sunnypilot is not engaged.
+    visibility:
+    - type: param
+      key: DisableDriverMonitoring
+      equals: false
   - key: IsMetric
     widget: toggle
     title: Use Metric System
@@ -41,6 +45,10 @@ sections:
     needs_onroad_cycle: true
     title: Record and Upload Driver Camera
     description: Upload data from the driver facing camera and help improve the driver monitoring algorithm.
+    visibility:
+    - type: param
+      key: DisableDriverMonitoring
+      equals: false
   - key: RecordAudio
     widget: toggle
     needs_onroad_cycle: true

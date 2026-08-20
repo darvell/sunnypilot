@@ -76,6 +76,7 @@ class SelfdriveD(CruiseHelper):
     else:
       self.CP_SP = CP_SP
 
+    self.disable_driver_monitoring = self.params.get_bool("DisableDriverMonitoring")
     self.car_events = CarEvents(self.CP)
 
     self.pose_calibrator = PoseCalibrator()
@@ -93,12 +94,16 @@ class SelfdriveD(CruiseHelper):
     self.gps_location_service = get_gps_location_service(self.params)
     self.gps_packets = [self.gps_location_service]
     self.sensor_packets = ["accelerometer", "gyroscope"]
-    self.camera_packets = ["narrowRoadCameraState", "cabinCameraState", "wideRoadCameraState"]
+    self.camera_packets = ["narrowRoadCameraState", "wideRoadCameraState"]
+    if not self.disable_driver_monitoring:
+      self.camera_packets.append("cabinCameraState")
 
     # TODO: de-couple selfdrived with card/conflate on carState without introducing controls mismatches
     self.car_state_sock = messaging.sub_sock('carState', timeout=20)
 
     ignore = self.sensor_packets + self.gps_packets + ['alertDebug', 'lateralManeuverPlan'] + ['modelDataV2SP', 'longitudinalPlanSP']
+    if self.disable_driver_monitoring:
+      ignore += ['cabinCameraState', 'driverMonitoringState']
     if SIMULATION:
       ignore += ['cabinCameraState', 'managerState']
     if REPLAY:
@@ -246,8 +251,8 @@ class SelfdriveD(CruiseHelper):
     if not self.CP.pcmCruise and CS.vCruise > 250 and resume_pressed:
       self.events.add(EventName.resumeBlocked)
 
-    # Handle DM
-    if not self.CP.notCar:
+    # Handle DM unless explicitly removed in the lab no-camera build.
+    if not self.CP.notCar and not self.disable_driver_monitoring:
       # Block engaging until lockout times out or ignition reset
       if self.sm['driverMonitoringState'].lockout and not self.dm_lockout_set:
         self.params.put_bool("DriverTooDistracted", True)
@@ -270,6 +275,8 @@ class SelfdriveD(CruiseHelper):
       if self.sm['driverMonitoringState'].visionPolicyState.uncertainOffroadAlertPercent >= 100 and not self.dm_uncertain_alerted:
         set_offroad_alert("Offroad_DriverMonitoringUncertain", True)
         self.dm_uncertain_alerted = True
+
+    if not self.CP.notCar:
       self.events_sp.add_from_msg(self.sm['longitudinalPlanSP'].events)
 
     # Add car events, ignore if CAN isn't valid

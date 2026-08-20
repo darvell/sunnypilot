@@ -215,6 +215,7 @@ class DeviceLayoutSP(DeviceLayout):
     )
 
     # Offroad only buttons
+    self._quiet_mode_and_dcam.action_item.right_button.set_visible(not ui_state.disable_driver_monitoring)
     self._quiet_mode_and_dcam.action_item.right_button.set_enabled(ui_state.is_offroad())
     self._reg_and_training.action_item.left_button.set_enabled(ui_state.is_offroad())
     self._reg_and_training.action_item.right_button.set_enabled(ui_state.is_offroad())

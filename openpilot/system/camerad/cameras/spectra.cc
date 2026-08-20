@@ -274,6 +274,10 @@ int SpectraCamera::clear_req_queue() {
 }
 
 void SpectraCamera::camera_open(VisionIpcServer *v) {
+  // In the lab no-DM mode, do not probe or power the cabin sensor at all.
+  // Disabled road cameras still need their existing I2C setup for the shared strobe GPIO behavior.
+  if (!enabled && cc.stream_type == VISION_STREAM_CABIN) return;
+
   if (!openSensor()) {
     return;
   }

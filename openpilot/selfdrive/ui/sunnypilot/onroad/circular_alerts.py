@@ -40,8 +40,8 @@ class CircularAlertsRenderer:
     if not ui_state.started:
       self._standstill_elapsed_time = 0.0
 
-    self._allow_e2e_alerts = sm['selfdriveState'].alertSize == log.SelfdriveState.AlertSize.none and \
-                             sm.recv_frame['driverStateV2'] > ui_state.started_frame
+    driver_state_ready = ui_state.disable_driver_monitoring or sm.recv_frame['driverStateV2'] > ui_state.started_frame
+    self._allow_e2e_alerts = sm['selfdriveState'].alertSize == log.SelfdriveState.AlertSize.none and driver_state_ready
 
     if self._green_light_alert or self._lead_depart_alert:
       self._e2e_alert_display_timer = 3 * gui_app.target_fps

@@ -383,7 +383,10 @@ def main(demo=False):
   # messaging
   pub_socks = ["modelV2", "drivingModelData", "cameraOdometry", "modelDataV2SP"] + (["chestnutState"] if USBGPU else [])
   pm = PubMaster(pub_socks)
-  sm = SubMaster(["deviceState", "carState", "narrowRoadCameraState", "extrinsicsCalibration", "driverMonitoringState", "carControl", "lateralDelay"])
+  disable_driver_monitoring = params.get_bool("DisableDriverMonitoring")
+  ignore_dm = ["driverMonitoringState"] if disable_driver_monitoring else []
+  sm = SubMaster(["deviceState", "carState", "narrowRoadCameraState", "extrinsicsCalibration", "driverMonitoringState", "carControl", "lateralDelay"],
+                 ignore_alive=ignore_dm, ignore_avg_freq=ignore_dm, ignore_valid=ignore_dm)
 
   publish_state = PublishState()
   chestnut_state = ChestnutState(pm, USBGPU) if USBGPU else None
@@ -452,7 +455,7 @@ def main(demo=False):
 
     sm.update(0)
     desire = DH.desire
-    is_rhd = sm["driverMonitoringState"].isRHD
+    is_rhd = params.get_bool("IsRhdDetected") if disable_driver_monitoring else sm["driverMonitoringState"].isRHD
     frame_id = sm["narrowRoadCameraState"].frameId
     v_ego = max(sm["carState"].vEgo, 0.)
     if sm.frame % 60 == 0:
