@@ -462,6 +462,8 @@ struct CarStateSP @0xb86e6369214c01c8 {
   rearAutomaticBrakingAvailable @13 :Bool;
   rearAutomaticBrakingState @14 :UInt8;
   rearAutomaticBrakingAlert @15 :UInt8;
+  rearCrossTrafficLeft @16 :Bool;
+  rearCrossTrafficRight @17 :Bool;
 }
 
 struct LiveMapDataSP @0xf416ec09499d9d19 {

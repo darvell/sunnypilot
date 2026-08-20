@@ -21,6 +21,8 @@ class RearSonarIndicators:
     self._center = 0
     self._right = 0
     self._rab_alert = 0
+    self._rcta_left = False
+    self._rcta_right = False
 
   def update(self) -> None:
     state = ui_state.sm['carStateSP']
@@ -31,20 +33,23 @@ class RearSonarIndicators:
     self._center = state.rearSonarCenter
     self._right = state.rearSonarRight
     self._rab_alert = state.rearAutomaticBrakingAlert
+    self._rcta_left = state.rearCrossTrafficLeft
+    self._rcta_right = state.rearCrossTrafficRight
 
   @property
   def detected(self) -> bool:
-    return self._valid and any((self._left, self._center, self._right, self._rab_alert))
+    sonar_detected = self._valid and any((self._left, self._center, self._right, self._rab_alert))
+    return sonar_detected or self._rcta_left or self._rcta_right
 
   def render(self, rect: rl.Rectangle) -> None:
-    if self._faulted or self._halted:
+    unavailable = self._faulted or self._halted
+    if unavailable:
       text = "REAR SENSORS UNAVAILABLE"
       size = 24
       measured = measure_text_cached(self._font, text, size)
       rl.draw_text_ex(self._font, text,
-                      rl.Vector2(rect.x + (rect.width - measured.x) / 2, rect.y + rect.height - 64),
+                      rl.Vector2(rect.x + (rect.width - measured.x) / 2, rect.y + rect.height - 92),
                       size, 0, rl.Color(190, 190, 190, 220))
-      return
 
     if not self.detected:
       return
@@ -56,12 +61,13 @@ class RearSonarIndicators:
     start_x = rect.x + (rect.width - total_width) / 2
     y = rect.y + rect.height - 64
     warning = rl.Color(255, 170, 32, 235)
-    braking = rl.Color(255, 55, 45, 245)
-    color = braking if self._rab_alert else warning
+    critical = rl.Color(255, 55, 45, 245)
 
-    # The recovered values are categorical warning zones, not calibrated distances.
-    # Draw presence only until the real car establishes the enum ordering.
-    for index, active in enumerate((self._left, self._center, self._right)):
-      if active:
+    # The recovered sonar values are categorical warning zones, not calibrated distances.
+    # Draw presence only until the real car establishes the enum ordering. RCTA is independently red.
+    active_states = (self._left if self._valid else 0, self._center if self._valid else 0, self._right if self._valid else 0)
+    rcta_states = (self._rcta_left, False, self._rcta_right)
+    for index, (active, rcta) in enumerate(zip(active_states, rcta_states, strict=True)):
+      if active or rcta:
         segment = rl.Rectangle(start_x + index * (segment_width + gap), y, segment_width, segment_height)
-        rl.draw_rectangle_rounded(segment, 0.8, 8, color)
+        rl.draw_rectangle_rounded(segment, 0.8, 8, critical if self._rab_alert or rcta else warning)
