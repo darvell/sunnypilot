@@ -1,0 +1,30 @@
+{
+  "route": "38b065e31c0a9ed7/0000000b--eab0d07145",
+  "platform": "SUBARU_CROSSTREK_2025",
+  "can_id": "0x228",
+  "frames": 51002,
+  "state_order": [
+    "left_adjacent",
+    "left_approaching",
+    "right_adjacent",
+    "right_approaching"
+  ],
+  "states": [
+    {"state": [0, 0, 0, 0], "frames": 46238},
+    {"state": [1, 0, 0, 0], "frames": 1628},
+    {"state": [0, 0, 1, 0], "frames": 1254},
+    {"state": [0, 1, 0, 0], "frames": 567},
+    {"state": [0, 0, 1, 1], "frames": 458},
+    {"state": [1, 1, 0, 0], "frames": 426},
+    {"state": [0, 0, 0, 1], "frames": 252},
+    {"state": [0, 1, 0, 1], "frames": 61},
+    {"state": [0, 1, 1, 0], "frames": 50},
+    {"state": [1, 1, 1, 0], "frames": 41},
+    {"state": [1, 0, 1, 0], "frames": 27}
+  ],
+  "reverse_gear_frames": 0,
+  "notes": [
+    "All four individual adjacent/approaching states occur on the validated third-generation Crosstrek platform.",
+    "The route does not enter reverse, so the inferred global-platform RCTA bits still require on-car validation."
+  ]
+}
