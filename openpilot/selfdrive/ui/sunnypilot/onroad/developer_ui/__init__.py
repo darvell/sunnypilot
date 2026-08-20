@@ -12,7 +12,8 @@ from openpilot.selfdrive.ui.sunnypilot.onroad.developer_ui.elements import (
   UiElement, RelDistElement, RelSpeedElement, SteeringAngleElement,
   DesiredLateralAccelElement, ActualLateralAccelElement, DesiredSteeringAngleElement,
   AEgoElement, LeadSpeedElement, FrictionCoefficientElement, LatAccelFactorElement,
-  SteeringTorqueEpsElement, BearingDegElement, AltitudeElement, DesiredSteeringPIDElement
+  SteeringTorqueEpsElement, BearingDegElement, AltitudeElement, DesiredSteeringPIDElement,
+  BlindSpotStateElement, RearSonarStateElement
 )
 from openpilot.system.ui.lib.application import gui_app, FontWeight
 from openpilot.system.ui.lib.text_measure import measure_text_cached
@@ -53,6 +54,8 @@ class DeveloperUiRenderer(Widget):
     self.steering_torque_elem = SteeringTorqueEpsElement()
     self.bearing_elem = BearingDegElement()
     self.altitude_elem = AltitudeElement()
+    self.blind_spot_state_elem = BlindSpotStateElement()
+    self.rear_sonar_state_elem = RearSonarStateElement()
 
   def _update_state(self) -> None:
     self.dev_ui_mode = ui_state.developer_ui
@@ -138,6 +141,12 @@ class DeveloperUiRenderer(Widget):
       self.a_ego_elem.update(sm, ui_state.is_metric),
       self.lead_speed_elem.update(sm, ui_state.is_metric),
     ]
+
+    if ui_state.CP is not None and ui_state.CP.brand == "subaru":
+      elements.extend([
+        self.blind_spot_state_elem.update(sm, ui_state.is_metric),
+        self.rear_sonar_state_elem.update(sm, ui_state.is_metric),
+      ])
 
     # Add torque-specific elements if using torque control
     if sm['controlsState'].lateralControlState.which() == 'torqueState':

@@ -445,6 +445,23 @@ struct BackupManagerSP @0xf98d843bfd7004a3 {
 
 struct CarStateSP @0xb86e6369214c01c8 {
   speedLimit @0 :Float32;
+
+  blindSpotLeftAdjacent @1 :Bool;
+  blindSpotLeftApproaching @2 :Bool;
+  blindSpotRightAdjacent @3 :Bool;
+  blindSpotRightApproaching @4 :Bool;
+  blindSpotMonitorValid @5 :Bool;
+
+  rearSonarAvailable @6 :Bool;
+  rearSonarValid @7 :Bool;
+  rearSonarLeft @8 :UInt8;
+  rearSonarCenter @9 :UInt8;
+  rearSonarRight @10 :UInt8;
+  rearSonarSystemHalted @11 :Bool;
+  rearSonarSystemFaulted @12 :Bool;
+  rearAutomaticBrakingAvailable @13 :Bool;
+  rearAutomaticBrakingState @14 :UInt8;
+  rearAutomaticBrakingAlert @15 :UInt8;
 }
 
 struct LiveMapDataSP @0xf416ec09499d9d19 {
