@@ -346,3 +346,36 @@ class AltitudeElement(GpsInfoElement):
 
     value = f"{altitude:.1f}" if gps_accuracy != 0.0 else "-"
     return UiElement(value, "ALT.", self.unit, rl.WHITE)
+
+
+class BlindSpotStateElement:
+  def update(self, sm, is_metric: bool) -> UiElement:
+    state = sm['carStateSP']
+    if not state.blindSpotMonitorValid:
+      return UiElement("STALE", "BSM", "", rl.Color(160, 160, 160, 255))
+
+    def side(adjacent, approaching):
+      if approaching:
+        return "P"
+      if adjacent:
+        return "A"
+      return "-"
+
+    left = side(state.blindSpotLeftAdjacent, state.blindSpotLeftApproaching)
+    right = side(state.blindSpotRightAdjacent, state.blindSpotRightApproaching)
+    hazard = left != "-" or right != "-"
+    color = rl.Color(255, 130, 32, 255) if hazard else rl.WHITE
+    return UiElement(f"{left}/{right}", "BSM L/R", "", color)
+
+
+class RearSonarStateElement:
+  def update(self, sm, is_metric: bool) -> UiElement:
+    state = sm['carStateSP']
+    if state.rearSonarSystemFaulted or state.rearSonarSystemHalted:
+      return UiElement("FAULT", "SONAR", "", rl.RED)
+    if not state.rearSonarValid:
+      return UiElement("-", "SONAR", "", rl.Color(160, 160, 160, 255))
+
+    warning = any((state.rearSonarLeft, state.rearSonarCenter, state.rearSonarRight))
+    color = rl.Color(255, 170, 32, 255) if warning else rl.WHITE
+    return UiElement(f"{state.rearSonarLeft}/{state.rearSonarCenter}/{state.rearSonarRight}", "SONAR L/C/R", "", color)
