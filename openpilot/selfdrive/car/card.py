@@ -86,6 +86,10 @@ class Car:
     self.params = Params()
 
     self.can_callbacks = can_comm_callbacks(self.can_sock, self.pm.sock['sendcan'])
+    self.eyesight_pre_disabled = False
+    self.eyesight_keepalive_stop = threading.Event()
+    self.eyesight_keepalive_thread: threading.Thread | None = None
+    self._maybe_pre_disable_subaru_eyesight()
 
     is_release = False  # self.params.get_bool("IsReleaseBranch")
     is_release_sp = self.params.get_bool("IsReleaseSpBranch")
@@ -189,6 +193,50 @@ class Car:
     # log fingerprint in sentry
     sunnypilot_interfaces.log_fingerprint(self.CP)
 
+  def _eyesight_keepalive_loop(self) -> None:
+    tester_present = CanData(0x787, b'\x02\x3e\x80\x00\x00\x00\x00\x00', 2)
+    while not self.eyesight_keepalive_stop.wait(0.5):
+      self.can_callbacks[1]([tester_present])
+
+  def _maybe_pre_disable_subaru_eyesight(self) -> None:
+    if not self.params.get_bool("AlphaLongitudinalEnabled"):
+      return
+
+    from opendbc.car import uds
+    from opendbc.car.disable_ecu import disable_ecu
+    from opendbc.car.subaru.values import CAR, GLOBAL_ES_ADDR, SubaruFlags
+
+    forced_platform = (self.params.get("CarPlatformBundle") or {}).get("platform", None)
+    is_crosstrek = forced_platform == CAR.SUBARU_CROSSTREK_2025
+    cached_raw = self.params.get("CarParamsCache")
+    if cached_raw is not None:
+      try:
+        with car.CarParams.from_bytes(cached_raw) as cached_cp:
+          is_crosstrek |= cached_cp.carFingerprint == CAR.SUBARU_CROSSTREK_2025 and bool(cached_cp.flags & SubaruFlags.LKAS_ANGLE)
+      except Exception:
+        cloudlog.exception("failed to read cached CarParams for Subaru pre-disable")
+
+    if not is_crosstrek:
+      cloudlog.warning("Subaru alpha long requested without a cached/forced Gen3 Crosstrek; disabling alpha long for this boot")
+      self.params.put_bool("AlphaLongitudinalEnabled", False, block=True)
+      return
+
+    communication_control = bytes([uds.SERVICE_TYPE.COMMUNICATION_CONTROL, uds.CONTROL_TYPE.DISABLE_RX_DISABLE_TX, uds.MESSAGE_TYPE.NORMAL])
+    self.eyesight_pre_disabled = disable_ecu(*self.can_callbacks, bus=2, addr=GLOBAL_ES_ADDR,
+                                             com_cont_req=communication_control, timeout=0.2, retry=3)
+    if self.eyesight_pre_disabled:
+      cloudlog.warning("EyeSight disabled before fingerprinting for Subaru alpha long")
+      self.eyesight_keepalive_thread = threading.Thread(target=self._eyesight_keepalive_loop, daemon=True)
+      self.eyesight_keepalive_thread.start()
+    else:
+      cloudlog.error("pre-engine EyeSight disable failed; disabling Subaru alpha long for this boot")
+      self.params.put_bool("AlphaLongitudinalEnabled", False, block=True)
+
+  def _stop_eyesight_keepalive(self) -> None:
+    self.eyesight_keepalive_stop.set()
+    if self.eyesight_keepalive_thread is not None:
+      self.eyesight_keepalive_thread.join(timeout=1.0)
+
   def state_update(self) -> tuple[car.CarState, custom.CarStateSP, structs.RadarDataT | None]:
     """carState update loop, driven by can"""
 
@@ -271,11 +319,11 @@ class Car:
     """control update loop, driven by carControl"""
 
     if not self.initialized_prev:
-      # Initialize CarInterface, once controls are ready
-      # TODO: this can make us miss at least a few cycles when doing an ECU knockout
-      self.CI.init(self.CP, self.CP_SP, *self.can_callbacks)
-      # signal pandad to switch to car safety mode
+      # The pre-engine path already performed Subaru's only init action (the EyeSight knockout).
+      if not self.eyesight_pre_disabled:
+        self.CI.init(self.CP, self.CP_SP, *self.can_callbacks)
       self.params.put_bool("ControlsReady", True)
+      self._stop_eyesight_keepalive()
 
     if self.sm.all_alive(['carControl']):
       # send car controls over can
