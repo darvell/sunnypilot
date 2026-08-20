@@ -1,0 +1,629 @@
+[
+  {
+    "route": "3c8f0c502e119c1c/2020-06-30--12-58-02--0",
+    "car": "SUBARU_ASCENT",
+    "frames325": 738,
+    "states325": [
+      [
+        [
+          192,
+          0,
+          0
+        ],
+        630
+      ],
+      [
+        [
+          193,
+          0,
+          0
+        ],
+        98
+      ],
+      [
+        [
+          0,
+          0,
+          0
+        ],
+        8
+      ],
+      [
+        [
+          64,
+          0,
+          0
+        ],
+        2
+      ]
+    ],
+    "reverse325": [
+      [
+        [
+          0,
+          0,
+          0
+        ],
+        6
+      ],
+      [
+        [
+          192,
+          0,
+          0
+        ],
+        2
+      ],
+      [
+        [
+          64,
+          0,
+          0
+        ],
+        2
+      ]
+    ],
+    "bsm": [
+      [
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        5628
+      ]
+    ]
+  },
+  {
+    "route": "c321c6b697c5a5ff/2020-06-23--11-04-33--0",
+    "car": "SUBARU_FORESTER",
+    "frames325": 603,
+    "states325": [
+      [
+        [
+          192,
+          0,
+          0
+        ],
+        603
+      ]
+    ],
+    "reverse325": [],
+    "bsm": [
+      [
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        5906
+      ]
+    ]
+  },
+  {
+    "route": "791340bc01ed993d/2019-03-10--16-28-08--0",
+    "car": "SUBARU_IMPREZA",
+    "frames325": 603,
+    "states325": [
+      [
+        [
+          192,
+          0,
+          0
+        ],
+        509
+      ],
+      [
+        [
+          0,
+          0,
+          0
+        ],
+        49
+      ],
+      [
+        [
+          65,
+          0,
+          0
+        ],
+        35
+      ],
+      [
+        [
+          193,
+          0,
+          0
+        ],
+        9
+      ],
+      [
+        [
+          64,
+          0,
+          0
+        ],
+        1
+      ]
+    ],
+    "reverse325": [
+      [
+        [
+          65,
+          0,
+          0
+        ],
+        25
+      ],
+      [
+        [
+          0,
+          0,
+          0
+        ],
+        22
+      ],
+      [
+        [
+          64,
+          0,
+          0
+        ],
+        1
+      ]
+    ],
+    "bsm": [
+      [
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        6429
+      ]
+    ]
+  },
+  {
+    "route": "8bf7e79a3ce64055/2021-05-24--09-36-27--0",
+    "car": "SUBARU_IMPREZA_2020",
+    "frames325": 611,
+    "states325": [
+      [
+        [
+          192,
+          0,
+          0
+        ],
+        611
+      ]
+    ],
+    "reverse325": [],
+    "bsm": [
+      [
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        6014
+      ]
+    ]
+  },
+  {
+    "route": "8de015561e1ea4a0/2023-08-29--17-08-31--0",
+    "car": "SUBARU_IMPREZA",
+    "frames325": 665,
+    "states325": [
+      [
+        [
+          192,
+          0,
+          0
+        ],
+        665
+      ]
+    ],
+    "reverse325": [
+      [
+        [
+          192,
+          0,
+          0
+        ],
+        1
+      ]
+    ],
+    "bsm": [
+      [
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        5928
+      ]
+    ]
+  },
+  {
+    "route": "1bbe6bf2d62f58a8/2022-07-14--17-11-43--10",
+    "car": "SUBARU_OUTBACK",
+    "frames325": 600,
+    "states325": [
+      [
+        [
+          192,
+          0,
+          0
+        ],
+        600
+      ]
+    ],
+    "reverse325": [],
+    "bsm": [
+      [
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        5687
+      ],
+      [
+        [
+          1,
+          0,
+          0,
+          0
+        ],
+        312
+      ]
+    ]
+  },
+  {
+    "route": "c56e69bbc74b8fad/2022-08-18--09-43-51--3",
+    "car": "SUBARU_LEGACY",
+    "frames325": 600,
+    "states325": [
+      [
+        [
+          192,
+          0,
+          0
+        ],
+        600
+      ]
+    ],
+    "reverse325": [],
+    "bsm": [
+      [
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        5872
+      ]
+    ]
+  },
+  {
+    "route": "f4e3a0c511a076f4/2022-08-04--16-16-48--2",
+    "car": "SUBARU_CROSSTREK_HYBRID",
+    "frames325": 600,
+    "states325": [
+      [
+        [
+          192,
+          0,
+          0
+        ],
+        600
+      ]
+    ],
+    "reverse325": [],
+    "bsm": [
+      [
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        1000
+      ]
+    ]
+  },
+  {
+    "route": "f73c01590368ee5b/00000017--117e1dd96d--0",
+    "car": "SUBARU_CROSSTREK_2025",
+    "error": "LogsUnavailable('1/1 logs were not found, please ensure all logs are uploaded. You can fall back to qlogs with \\'/a\\' selector at the end of the route name.\\n\\nExceptions for sources:\\n  - internal_source: Exception(\\'Internal source not available\\')\\n  - comma_api_source: IndexError(\\'list index out of range\\')\\n  - openpilotci_source: FileNotFoundError(\"Did not find (\\'rlog.zst\\', \\'rlog.bz2\\') for seg idxs [0] of f73c01590368ee5b/00000017--117e1dd96d\")\\n  - comma_car_segments_source: AssertionError()\\n  - sunnypilot_car_segments_source: FileNotFoundError(\"Did not find (\\'rlog.zst\\', \\'rlog.bz2\\') for seg idxs [0] of f73c01590368ee5b/00000017--117e1dd96d\")')"
+  },
+  {
+    "route": "7fd1e4f3a33c1673/2022-12-04--15-09-53--4",
+    "car": "SUBARU_FORESTER_2022",
+    "frames325": 600,
+    "states325": [
+      [
+        [
+          192,
+          0,
+          0
+        ],
+        600
+      ]
+    ],
+    "reverse325": [],
+    "bsm": [
+      [
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        5183
+      ],
+      [
+        [
+          0,
+          1,
+          0,
+          0
+        ],
+        359
+      ],
+      [
+        [
+          1,
+          0,
+          0,
+          0
+        ],
+        271
+      ],
+      [
+        [
+          1,
+          1,
+          0,
+          0
+        ],
+        140
+      ]
+    ]
+  },
+  {
+    "route": "f3b34c0d2632aa83/2023-07-23--20-43-25--7",
+    "car": "SUBARU_OUTBACK_2023",
+    "frames325": 600,
+    "states325": [
+      [
+        [
+          194,
+          0,
+          0
+        ],
+        600
+      ]
+    ],
+    "reverse325": [],
+    "bsm": [
+      [
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        5118
+      ],
+      [
+        [
+          0,
+          1,
+          0,
+          0
+        ],
+        384
+      ],
+      [
+        [
+          1,
+          1,
+          0,
+          0
+        ],
+        355
+      ],
+      [
+        [
+          1,
+          0,
+          0,
+          0
+        ],
+        42
+      ]
+    ]
+  },
+  {
+    "route": "99437cef6d5ff2ee/2023-03-13--21-21-38--7",
+    "car": "SUBARU_ASCENT_2023",
+    "frames325": 600,
+    "states325": [
+      [
+        [
+          192,
+          0,
+          0
+        ],
+        600
+      ]
+    ],
+    "reverse325": [],
+    "bsm": [
+      [
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        4837
+      ],
+      [
+        [
+          0,
+          0,
+          1,
+          0
+        ],
+        552
+      ],
+      [
+        [
+          0,
+          1,
+          0,
+          0
+        ],
+        259
+      ],
+      [
+        [
+          1,
+          0,
+          0,
+          0
+        ],
+        210
+      ]
+    ]
+  },
+  {
+    "route": "95441c38ae8c130e/2020-06-08--12-10-17--0",
+    "car": "SUBARU_FORESTER_PREGLOBAL",
+    "frames325": 609,
+    "states325": [
+      [
+        [
+          192,
+          0,
+          0
+        ],
+        527
+      ],
+      [
+        [
+          193,
+          0,
+          0
+        ],
+        35
+      ],
+      [
+        [
+          0,
+          0,
+          0
+        ],
+        29
+      ],
+      [
+        [
+          65,
+          0,
+          0
+        ],
+        17
+      ],
+      [
+        [
+          64,
+          0,
+          0
+        ],
+        1
+      ]
+    ],
+    "reverse325": [],
+    "bsm": []
+  },
+  {
+    "route": "df5ca7660000fba8/2020-06-16--17-37-19--0",
+    "car": "SUBARU_LEGACY_PREGLOBAL",
+    "error": "LogsUnavailable('1/1 logs were not found, please ensure all logs are uploaded. You can fall back to qlogs with \\'/a\\' selector at the end of the route name.\\n\\nExceptions for sources:\\n  - internal_source: Exception(\\'Internal source not available\\')\\n  - comma_api_source: FileNotFoundError(\"Did not find (\\'rlog.zst\\', \\'rlog.bz2\\') for seg idxs [0] of df5ca7660000fba8/2020-06-16--17-37-19\")\\n  - openpilotci_source: FileNotFoundError(\"Did not find (\\'rlog.zst\\', \\'rlog.bz2\\') for seg idxs [0] of df5ca7660000fba8/2020-06-16--17-37-19\")\\n  - comma_car_segments_source: AssertionError()\\n  - sunnypilot_car_segments_source: FileNotFoundError(\"Did not find (\\'rlog.zst\\', \\'rlog.bz2\\') for seg idxs [0] of df5ca7660000fba8/2020-06-16--17-37-19\")')"
+  },
+  {
+    "route": "5ab784f361e19b78/2020-06-08--16-30-41--0",
+    "car": "SUBARU_OUTBACK_PREGLOBAL",
+    "frames325": 603,
+    "states325": [
+      [
+        [
+          192,
+          0,
+          0
+        ],
+        510
+      ],
+      [
+        [
+          0,
+          0,
+          0
+        ],
+        44
+      ],
+      [
+        [
+          193,
+          0,
+          0
+        ],
+        40
+      ],
+      [
+        [
+          65,
+          0,
+          0
+        ],
+        8
+      ],
+      [
+        [
+          64,
+          0,
+          0
+        ],
+        1
+      ]
+    ],
+    "reverse325": [],
+    "bsm": []
+  },
+  {
+    "route": "e19eb5d5353b1ac1/2020-08-09--14-37-56--0",
+    "car": "SUBARU_OUTBACK_PREGLOBAL_2018",
+    "frames325": 620,
+    "states325": [
+      [
+        [
+          192,
+          0,
+          0
+        ],
+        620
+      ]
+    ],
+    "reverse325": [],
+    "bsm": []
+  }
+]
