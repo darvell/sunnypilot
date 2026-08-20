@@ -25,6 +25,8 @@ class TestSubaruSurroundingsUi(unittest.TestCase):
     sonar._center = 0
     sonar._right = 0
     sonar._rab_alert = 0
+    sonar._rcta_left = False
+    sonar._rcta_right = False
     self.assertFalse(sonar.detected)
 
     sonar._center = 1
@@ -32,6 +34,9 @@ class TestSubaruSurroundingsUi(unittest.TestCase):
 
     sonar._valid = False
     self.assertFalse(sonar.detected)
+
+    sonar._rcta_left = True
+    self.assertTrue(sonar.detected)
 
   def test_developer_elements_preserve_detailed_states(self):
     state = SimpleNamespace(
@@ -46,10 +51,15 @@ class TestSubaruSurroundingsUi(unittest.TestCase):
       rearSonarLeft=1,
       rearSonarCenter=4,
       rearSonarRight=2,
+      rearCrossTrafficLeft=False,
+      rearCrossTrafficRight=False,
     )
     sm = {"carStateSP": state}
     self.assertEqual(BlindSpotStateElement().update(sm, True).value, "P/A")
     self.assertEqual(RearSonarStateElement().update(sm, True).value, "1/4/2")
+
+    state.rearCrossTrafficLeft = True
+    self.assertEqual(RearSonarStateElement().update(sm, True).value, "L/-")
 
 
 if __name__ == "__main__":

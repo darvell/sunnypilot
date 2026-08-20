@@ -371,6 +371,9 @@ class BlindSpotStateElement:
 class RearSonarStateElement:
   def update(self, sm, is_metric: bool) -> UiElement:
     state = sm['carStateSP']
+    if state.rearCrossTrafficLeft or state.rearCrossTrafficRight:
+      sides = f"{'L' if state.rearCrossTrafficLeft else '-'}/{'R' if state.rearCrossTrafficRight else '-'}"
+      return UiElement(sides, "RCTA L/R", "", rl.RED)
     if state.rearSonarSystemFaulted or state.rearSonarSystemHalted:
       return UiElement("FAULT", "SONAR", "", rl.RED)
     if not state.rearSonarValid:
