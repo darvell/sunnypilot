@@ -25,6 +25,12 @@ class Paths:
     return '/mnt/external_realdata/'
 
   @staticmethod
+  def research_capture_root() -> str:
+    if os.environ.get('RESEARCH_CAPTURE_ROOT', False):
+      return os.environ['RESEARCH_CAPTURE_ROOT']
+    return str(Path(Paths.comma_home()) / "research_captures")
+
+  @staticmethod
   def swaglog_root() -> str:
     if PC:
       return os.path.join(Paths.comma_home(), "log")

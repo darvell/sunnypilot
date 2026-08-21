@@ -72,6 +72,8 @@ def manager_init() -> None:
 
   configure_driver_monitoring(params)
 
+  os.makedirs(Paths.research_capture_root(), exist_ok=True)
+
   # Create folders needed for msgq
   try:
     os.mkdir(Paths.shm_path())
