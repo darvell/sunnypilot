@@ -15,9 +15,12 @@ class TestSubaruPreDisable(unittest.TestCase):
     self.car.eyesight_keepalive_thread = None
 
   @staticmethod
-  def params(alpha_long, platform=None):
+  def params(alpha_long, platform=None, openpilot_enabled=True):
     params = Mock()
-    params.get_bool.side_effect = lambda key: alpha_long if key == "AlphaLongitudinalEnabled" else False
+    params.get_bool.side_effect = lambda key: {
+      "AlphaLongitudinalEnabled": alpha_long,
+      "OpenpilotEnabledToggle": openpilot_enabled,
+    }.get(key, False)
     params.get.side_effect = lambda key: ({"platform": platform} if key == "CarPlatformBundle" and platform else None)
     return params
 
@@ -34,6 +37,13 @@ class TestSubaruPreDisable(unittest.TestCase):
   @patch("opendbc.car.disable_ecu.disable_ecu")
   def test_disabled_when_alpha_long_is_off(self, disable_ecu):
     self.car.params = self.params(False, CAR.SUBARU_CROSSTREK_2025)
+    self.car._maybe_pre_disable_subaru_eyesight()
+    self.assertFalse(self.car.eyesight_pre_disabled)
+    disable_ecu.assert_not_called()
+
+  @patch("opendbc.car.disable_ecu.disable_ecu")
+  def test_disabled_when_openpilot_is_off(self, disable_ecu):
+    self.car.params = self.params(True, CAR.SUBARU_CROSSTREK_2025, openpilot_enabled=False)
     self.car._maybe_pre_disable_subaru_eyesight()
     self.assertFalse(self.car.eyesight_pre_disabled)
     disable_ecu.assert_not_called()
