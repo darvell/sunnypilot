@@ -199,7 +199,7 @@ class Car:
       self.can_callbacks[1]([tester_present])
 
   def _maybe_pre_disable_subaru_eyesight(self) -> None:
-    if not self.params.get_bool("AlphaLongitudinalEnabled"):
+    if not self.params.get_bool("AlphaLongitudinalEnabled") or not self.params.get_bool("OpenpilotEnabledToggle"):
       return
 
     from opendbc.car import uds
