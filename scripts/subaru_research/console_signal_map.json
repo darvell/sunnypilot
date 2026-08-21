@@ -1,0 +1,722 @@
+{
+  "can_messages": [
+    {
+      "can_id": 811,
+      "enabled": 1,
+      "kind": 0,
+      "table_index": 0,
+      "reserved": 0,
+      "signals": [
+        {
+          "output_index": 0,
+          "name": "EPB32B_5_7_AVH_ACTIVE",
+          "byte": 5,
+          "bit": 7,
+          "value_mask": 1,
+          "width": 1
+        }
+      ]
+    },
+    {
+      "can_id": 940,
+      "enabled": 1,
+      "kind": 0,
+      "table_index": 1,
+      "reserved": 0,
+      "signals": [
+        {
+          "output_index": 1,
+          "name": "BIU3AC_2_1_IMB_SMT",
+          "byte": 2,
+          "bit": 1,
+          "value_mask": 3,
+          "width": 2
+        },
+        {
+          "output_index": 26,
+          "name": "BIU3AC_6_1_CSTM_PRG",
+          "byte": 6,
+          "bit": 1,
+          "value_mask": 1,
+          "width": 1
+        }
+      ]
+    },
+    {
+      "can_id": 805,
+      "enabled": 1,
+      "kind": 0,
+      "table_index": 2,
+      "reserved": 0,
+      "signals": [
+        {
+          "output_index": 2,
+          "name": "EYE325_1_6_RAB",
+          "byte": 1,
+          "bit": 6,
+          "value_mask": 1,
+          "width": 1
+        }
+      ]
+    },
+    {
+      "can_id": 1617,
+      "enabled": 1,
+      "kind": 0,
+      "table_index": 3,
+      "reserved": 0,
+      "signals": [
+        {
+          "output_index": 3,
+          "name": "BIU651_4_6_CSTM_HBA",
+          "byte": 4,
+          "bit": 6,
+          "value_mask": 1,
+          "width": 1
+        },
+        {
+          "output_index": 11,
+          "name": "BIU651_6_2_ADB_ACTIVE",
+          "byte": 6,
+          "bit": 2,
+          "value_mask": 1,
+          "width": 1
+        }
+      ]
+    },
+    {
+      "can_id": 837,
+      "enabled": 1,
+      "kind": 0,
+      "table_index": 4,
+      "reserved": 0,
+      "signals": [
+        {
+          "output_index": 4,
+          "name": "EGI345_2_7_TRANSMISSION_TYPE",
+          "byte": 2,
+          "bit": 7,
+          "value_mask": 1,
+          "width": 1
+        }
+      ]
+    },
+    {
+      "can_id": 1660,
+      "enabled": 1,
+      "kind": 0,
+      "table_index": 5,
+      "reserved": 0,
+      "signals": []
+    },
+    {
+      "can_id": 1625,
+      "enabled": 1,
+      "kind": 0,
+      "table_index": 6,
+      "reserved": 0,
+      "signals": [
+        {
+          "output_index": 6,
+          "name": "PSM659_3_5_FNCAPP_SEAT_AWAY",
+          "byte": 3,
+          "bit": 5,
+          "value_mask": 1,
+          "width": 1
+        }
+      ]
+    },
+    {
+      "can_id": 1645,
+      "enabled": 1,
+      "kind": 0,
+      "table_index": 7,
+      "reserved": 0,
+      "signals": [
+        {
+          "output_index": 7,
+          "name": "PRG66D_3_2_PRG_EQUIPMENT",
+          "byte": 3,
+          "bit": 2,
+          "value_mask": 1,
+          "width": 1
+        }
+      ]
+    },
+    {
+      "can_id": 802,
+      "enabled": 1,
+      "kind": 0,
+      "table_index": 8,
+      "reserved": 0,
+      "signals": [
+        {
+          "output_index": 8,
+          "name": "EYE322_5_4_CSTM_ACC_CONT",
+          "byte": 5,
+          "bit": 4,
+          "value_mask": 1,
+          "width": 1
+        },
+        {
+          "output_index": 9,
+          "name": "EYE322_5_2_CSTM_SAS",
+          "byte": 5,
+          "bit": 2,
+          "value_mask": 1,
+          "width": 1
+        },
+        {
+          "output_index": 10,
+          "name": "EYE322_5_0_CSTM_MIS_AT_BACK",
+          "byte": 5,
+          "bit": 0,
+          "value_mask": 1,
+          "width": 1
+        },
+        {
+          "output_index": 17,
+          "name": "EYE322_5_5_CSTM_LANE",
+          "byte": 5,
+          "bit": 5,
+          "value_mask": 1,
+          "width": 1
+        }
+      ]
+    },
+    {
+      "can_id": 1658,
+      "enabled": 1,
+      "kind": 0,
+      "table_index": 9,
+      "reserved": 0,
+      "signals": [
+        {
+          "output_index": 12,
+          "name": "TPM67A_1_7_IND_PRESSURE",
+          "byte": 1,
+          "bit": 7,
+          "value_mask": 1,
+          "width": 1
+        }
+      ]
+    },
+    {
+      "can_id": 842,
+      "enabled": 1,
+      "kind": 0,
+      "table_index": 10,
+      "reserved": 0,
+      "signals": [
+        {
+          "output_index": 13,
+          "name": "TCU34A_2_0_WHEEL_DRIVE_TYPE",
+          "byte": 2,
+          "bit": 0,
+          "value_mask": 3,
+          "width": 2
+        }
+      ]
+    },
+    {
+      "can_id": 313,
+      "enabled": 1,
+      "kind": 0,
+      "table_index": 11,
+      "reserved": 0,
+      "signals": [
+        {
+          "output_index": 14,
+          "name": "VDC139_1_5_VEHICLE_HIGHT",
+          "byte": 1,
+          "bit": 5,
+          "value_mask": 3,
+          "width": 2
+        }
+      ]
+    },
+    {
+      "can_id": 1788,
+      "enabled": 1,
+      "kind": 0,
+      "table_index": 12,
+      "reserved": 0,
+      "signals": [
+        {
+          "output_index": 15,
+          "name": "EGI6FC_5_0_VIN_BYTE_NO",
+          "byte": 5,
+          "bit": 0,
+          "value_mask": 31,
+          "width": 5
+        },
+        {
+          "output_index": 16,
+          "name": "EGI6FC_6_0_VIN_BYTE_NO",
+          "byte": 6,
+          "bit": 0,
+          "value_mask": 255,
+          "width": 8
+        }
+      ]
+    },
+    {
+      "can_id": 803,
+      "enabled": 1,
+      "kind": 0,
+      "table_index": 13,
+      "reserved": 0,
+      "signals": [
+        {
+          "output_index": 18,
+          "name": "EYE323_7_6_ISA_FUNC_INFO",
+          "byte": 7,
+          "bit": 6,
+          "value_mask": 1,
+          "width": 1
+        },
+        {
+          "output_index": 19,
+          "name": "EYE323_7_5_SLIF_FUNC_INFO",
+          "byte": 7,
+          "bit": 5,
+          "value_mask": 1,
+          "width": 1
+        },
+        {
+          "output_index": 21,
+          "name": "EYE323_5_5_HAPT_FUNC_INFO",
+          "byte": 5,
+          "bit": 5,
+          "value_mask": 1,
+          "width": 1
+        },
+        {
+          "output_index": 22,
+          "name": "EYE323_5_3_ROAD_EDGE_FUNC_INFO",
+          "byte": 5,
+          "bit": 3,
+          "value_mask": 1,
+          "width": 1
+        },
+        {
+          "output_index": 23,
+          "name": "EYE323_5_1_TRAFFIC_FUNC_INFO",
+          "byte": 5,
+          "bit": 1,
+          "value_mask": 1,
+          "width": 1
+        },
+        {
+          "output_index": 24,
+          "name": "EYE323_6_7_SLOWDOWNL_FUNC_INFO",
+          "byte": 6,
+          "bit": 7,
+          "value_mask": 1,
+          "width": 1
+        },
+        {
+          "output_index": 27,
+          "name": "EYE323_4_6_FCW_FUNC_INFO",
+          "byte": 4,
+          "bit": 6,
+          "value_mask": 3,
+          "width": 2
+        },
+        {
+          "output_index": 28,
+          "name": "EYE323_6_6_LDW_TIMING_FUNC_INFO",
+          "byte": 6,
+          "bit": 6,
+          "value_mask": 1,
+          "width": 1
+        }
+      ]
+    },
+    {
+      "can_id": 801,
+      "enabled": 1,
+      "kind": 0,
+      "table_index": 14,
+      "reserved": 0,
+      "signals": [
+        {
+          "output_index": 20,
+          "name": "EYE321_3_3_ELK_OFF_IND",
+          "byte": 3,
+          "bit": 3,
+          "value_mask": 1,
+          "width": 1
+        }
+      ]
+    },
+    {
+      "can_id": 818,
+      "enabled": 1,
+      "kind": 0,
+      "table_index": 15,
+      "reserved": 0,
+      "signals": [
+        {
+          "output_index": 29,
+          "name": "PMN332_6_7_CUST_AUTO_ENG_STP",
+          "byte": 6,
+          "bit": 7,
+          "value_mask": 1,
+          "width": 1
+        }
+      ]
+    },
+    {
+      "can_id": 965,
+      "enabled": 1,
+      "kind": 0,
+      "table_index": 16,
+      "reserved": 0,
+      "signals": [
+        {
+          "output_index": 30,
+          "name": "EYE3C5_3_7_SPECIAL_DISP_INFO",
+          "byte": 3,
+          "bit": 7,
+          "value_mask": 1,
+          "width": 1
+        }
+      ]
+    }
+  ],
+  "meter_receive_map": [
+    {
+      "signal_id": 0,
+      "byte_position": 27,
+      "clear_mask": 252,
+      "value_mask": 3
+    },
+    {
+      "signal_id": 1,
+      "byte_position": 30,
+      "clear_mask": 254,
+      "value_mask": 1
+    },
+    {
+      "signal_id": 2,
+      "byte_position": 43,
+      "clear_mask": 0,
+      "value_mask": 255
+    },
+    {
+      "signal_id": 3,
+      "byte_position": 23,
+      "clear_mask": 240,
+      "value_mask": 15
+    },
+    {
+      "signal_id": 4,
+      "byte_position": 52,
+      "clear_mask": 254,
+      "value_mask": 1
+    },
+    {
+      "signal_id": 5,
+      "byte_position": 28,
+      "clear_mask": 254,
+      "value_mask": 1
+    },
+    {
+      "signal_id": 6,
+      "byte_position": 25,
+      "clear_mask": 254,
+      "value_mask": 1
+    },
+    {
+      "signal_id": 7,
+      "byte_position": 38,
+      "clear_mask": 252,
+      "value_mask": 3
+    },
+    {
+      "signal_id": 8,
+      "byte_position": 39,
+      "clear_mask": 254,
+      "value_mask": 1
+    },
+    {
+      "signal_id": 9,
+      "byte_position": 40,
+      "clear_mask": 252,
+      "value_mask": 3
+    },
+    {
+      "signal_id": 10,
+      "byte_position": 300,
+      "clear_mask": 252,
+      "value_mask": 3
+    },
+    {
+      "signal_id": 11,
+      "byte_position": 301,
+      "clear_mask": 252,
+      "value_mask": 3
+    },
+    {
+      "signal_id": 12,
+      "byte_position": 31,
+      "clear_mask": 254,
+      "value_mask": 1
+    },
+    {
+      "signal_id": 13,
+      "byte_position": 29,
+      "clear_mask": 254,
+      "value_mask": 1
+    },
+    {
+      "signal_id": 14,
+      "byte_position": 44,
+      "clear_mask": 254,
+      "value_mask": 1
+    },
+    {
+      "signal_id": 15,
+      "byte_position": 297,
+      "clear_mask": 252,
+      "value_mask": 3
+    },
+    {
+      "signal_id": 16,
+      "byte_position": 298,
+      "clear_mask": 252,
+      "value_mask": 3
+    },
+    {
+      "signal_id": 17,
+      "byte_position": 299,
+      "clear_mask": 252,
+      "value_mask": 3
+    },
+    {
+      "signal_id": 18,
+      "byte_position": 296,
+      "clear_mask": 252,
+      "value_mask": 3
+    },
+    {
+      "signal_id": 19,
+      "byte_position": 24,
+      "clear_mask": 252,
+      "value_mask": 3
+    },
+    {
+      "signal_id": 20,
+      "byte_position": 46,
+      "clear_mask": 254,
+      "value_mask": 1
+    },
+    {
+      "signal_id": 21,
+      "byte_position": 45,
+      "clear_mask": 254,
+      "value_mask": 1
+    },
+    {
+      "signal_id": 22,
+      "byte_position": 32,
+      "clear_mask": 254,
+      "value_mask": 1
+    },
+    {
+      "signal_id": 23,
+      "byte_position": 53,
+      "clear_mask": 254,
+      "value_mask": 1
+    },
+    {
+      "signal_id": 24,
+      "byte_position": 58,
+      "clear_mask": 254,
+      "value_mask": 1
+    },
+    {
+      "signal_id": 25,
+      "byte_position": 26,
+      "clear_mask": 248,
+      "value_mask": 7
+    },
+    {
+      "signal_id": 26,
+      "byte_position": 208,
+      "clear_mask": 0,
+      "value_mask": 255
+    },
+    {
+      "signal_id": 27,
+      "byte_position": 210,
+      "clear_mask": 0,
+      "value_mask": 255
+    },
+    {
+      "signal_id": 28,
+      "byte_position": 303,
+      "clear_mask": 254,
+      "value_mask": 1
+    },
+    {
+      "signal_id": 29,
+      "byte_position": 76,
+      "clear_mask": 224,
+      "value_mask": 31
+    },
+    {
+      "signal_id": 30,
+      "byte_position": 77,
+      "clear_mask": 250,
+      "value_mask": 5
+    },
+    {
+      "signal_id": 31,
+      "byte_position": 78,
+      "clear_mask": 0,
+      "value_mask": 255
+    },
+    {
+      "signal_id": 32,
+      "byte_position": 79,
+      "clear_mask": 0,
+      "value_mask": 255
+    },
+    {
+      "signal_id": 33,
+      "byte_position": 80,
+      "clear_mask": 0,
+      "value_mask": 255
+    },
+    {
+      "signal_id": 34,
+      "byte_position": 81,
+      "clear_mask": 254,
+      "value_mask": 1
+    },
+    {
+      "signal_id": 35,
+      "byte_position": 307,
+      "clear_mask": 254,
+      "value_mask": 1
+    },
+    {
+      "signal_id": 36,
+      "byte_position": 48,
+      "clear_mask": 0,
+      "value_mask": 255
+    },
+    {
+      "signal_id": 37,
+      "byte_position": 49,
+      "clear_mask": 252,
+      "value_mask": 3
+    },
+    {
+      "signal_id": 38,
+      "byte_position": 62,
+      "clear_mask": 254,
+      "value_mask": 1
+    },
+    {
+      "signal_id": 39,
+      "byte_position": 82,
+      "clear_mask": 252,
+      "value_mask": 3
+    },
+    {
+      "signal_id": 40,
+      "byte_position": 388,
+      "clear_mask": 0,
+      "value_mask": 255
+    },
+    {
+      "signal_id": 41,
+      "byte_position": 71,
+      "clear_mask": 0,
+      "value_mask": 255
+    },
+    {
+      "signal_id": 42,
+      "byte_position": 42,
+      "clear_mask": 0,
+      "value_mask": 255
+    },
+    {
+      "signal_id": 43,
+      "byte_position": 51,
+      "clear_mask": 254,
+      "value_mask": 1
+    },
+    {
+      "signal_id": 44,
+      "byte_position": 314,
+      "clear_mask": 0,
+      "value_mask": 255
+    },
+    {
+      "signal_id": 85,
+      "byte_position": 308,
+      "clear_mask": 254,
+      "value_mask": 1
+    },
+    {
+      "signal_id": 86,
+      "byte_position": 314,
+      "clear_mask": 240,
+      "value_mask": 15
+    },
+    {
+      "signal_id": 87,
+      "byte_position": 312,
+      "clear_mask": 240,
+      "value_mask": 15
+    },
+    {
+      "signal_id": 88,
+      "byte_position": 313,
+      "clear_mask": 240,
+      "value_mask": 15
+    },
+    {
+      "signal_id": 89,
+      "byte_position": 394,
+      "clear_mask": 0,
+      "value_mask": 255
+    },
+    {
+      "signal_id": 90,
+      "byte_position": 392,
+      "clear_mask": 0,
+      "value_mask": 255
+    },
+    {
+      "signal_id": 91,
+      "byte_position": 390,
+      "clear_mask": 0,
+      "value_mask": 255
+    },
+    {
+      "signal_id": 92,
+      "byte_position": 309,
+      "clear_mask": 240,
+      "value_mask": 15
+    },
+    {
+      "signal_id": 93,
+      "byte_position": 315,
+      "clear_mask": 252,
+      "value_mask": 3
+    }
+  ],
+  "known_high_level_chain": {
+    "property": "Param_Current_Meter.iacc",
+    "struct_offset": 132,
+    "param_meter_byte": 37,
+    "param_meter_bit": 1,
+    "meter_signal_id": 93,
+    "meter_middle_byte": 315
+  }
+}
