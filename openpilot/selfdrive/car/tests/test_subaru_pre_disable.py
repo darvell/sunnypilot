@@ -87,13 +87,32 @@ class TestSubaruPreDisable(unittest.TestCase):
 
   @patch("openpilot.selfdrive.car.card.time.monotonic", side_effect=[0.0, 0.1])
   def test_eyesight_silence_verification_rejects_stock_lkas_frame(self, _monotonic):
-    self.car.can_callbacks = (Mock(side_effect=[[], [[CanData(0x124, b'\x00' * 8, 0)]]]), Mock())
+    self.car.can_callbacks = (Mock(side_effect=[[], [[CanData(0x124, b'\x00' * 8, 2)]]]), Mock())
     self.assertFalse(self.car._verify_subaru_eyesight_silenced())
 
   @patch("openpilot.selfdrive.car.card.time.monotonic", side_effect=[0.0, 0.1, 0.6])
   def test_eyesight_silence_verification_accepts_quiet_bus(self, _monotonic):
     self.car.can_callbacks = (Mock(side_effect=[[], []]), Mock())
     self.assertTrue(self.car._verify_subaru_eyesight_silenced())
+
+  def test_eyesight_traffic_check_ignores_returned_and_rejected_transmissions(self):
+    packets = [[CanData(0x124, b'\x00' * 8, 128), CanData(0x220, b'\x00' * 8, 193)]]
+    self.assertFalse(self.car._subaru_eyesight_traffic_present(packets))
+
+  def test_runtime_eyesight_resume_falls_back_before_actuation(self):
+    self.car.CP = Mock(openpilotLongitudinalControl=True)
+    self.car.params = Mock()
+
+    with self.assertRaisesRegex(RuntimeError, "stock EyeSight traffic resumed"):
+      self.car._check_subaru_eyesight_remains_silenced([[CanData(0x124, b'\x00' * 8, 2)]])
+
+    self.car.params.put_bool.assert_called_once_with("AlphaLongitudinalEnabled", False, block=True)
+
+  def test_runtime_eyesight_check_is_inactive_with_stock_longitudinal(self):
+    self.car.CP = Mock(openpilotLongitudinalControl=False)
+    self.car.params = Mock()
+    self.car._check_subaru_eyesight_remains_silenced([[CanData(0x124, b'\x00' * 8, 2)]])
+    self.car.params.put_bool.assert_not_called()
 
 
 if __name__ == "__main__":

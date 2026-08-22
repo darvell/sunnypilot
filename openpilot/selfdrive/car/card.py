@@ -198,22 +198,25 @@ class Car:
     while not self.eyesight_keepalive_stop.wait(0.5):
       self.can_callbacks[1]([tester_present])
 
-  def _verify_subaru_eyesight_silenced(self, timeout: float = 0.5) -> bool:
-    from opendbc.car.subaru.values import CanBus
+  @staticmethod
+  def _subaru_eyesight_traffic_present(can_packets: list[list[CanData]]) -> bool:
+    stock_eyesight_addrs = {0x124, 0x220, 0x221, 0x222}
+    return any(msg.src in (0, 1, 2) and msg.address in stock_eyesight_addrs
+               for packet in can_packets for msg in packet)
 
-    stock_eyesight_frames = {
-      (CanBus.main, 0x124),
-      (CanBus.alt, 0x220),
-      (CanBus.alt, 0x221),
-      (CanBus.alt, 0x222),
-    }
+  def _verify_subaru_eyesight_silenced(self, timeout: float = 0.5) -> bool:
     self.can_callbacks[0]()  # discard traffic queued before the communication-control response
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
-      for packet in self.can_callbacks[0](wait_for_one=True):
-        if any((msg.src, msg.address) in stock_eyesight_frames for msg in packet):
-          return False
+      if self._subaru_eyesight_traffic_present(self.can_callbacks[0](wait_for_one=True)):
+        return False
     return True
+
+  def _check_subaru_eyesight_remains_silenced(self, can_packets: list[list[CanData]]) -> None:
+    if self.CP.openpilotLongitudinalControl and self._subaru_eyesight_traffic_present(can_packets):
+      cloudlog.error("stock EyeSight traffic resumed during Subaru alpha long; falling back to stock longitudinal")
+      self.params.put_bool("AlphaLongitudinalEnabled", False, block=True)
+      raise RuntimeError("stock EyeSight traffic resumed during Subaru alpha long")
 
   def _maybe_disable_subaru_eyesight(self, candidate: str | None) -> bool:
     if not self.params.get_bool("OpenpilotEnabledToggle"):
@@ -262,6 +265,7 @@ class Car:
 
     can_strs = messaging.drain_sock_raw(self.can_sock, wait_for_one=True)
     can_list = can_capnp_to_list(can_strs)
+    self._check_subaru_eyesight_remains_silenced(can_list)
 
     # Update carState from CAN
     CS, CS_SP = self.CI.update(can_list)
