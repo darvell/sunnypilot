@@ -4,7 +4,7 @@ from opendbc.car import Bus, make_tester_present_msg
 from opendbc.car.lateral import apply_center_deadzone, apply_driver_steer_torque_limits, apply_steer_angle_limits_vm, common_fault_avoidance
 from opendbc.car.interfaces import CarControllerBase
 from opendbc.car.subaru import subarucan
-from opendbc.car.subaru.values import DBC, GLOBAL_ES_ADDR, CanBus, CarControllerParams, SubaruFlags
+from opendbc.car.subaru.values import CAR, DBC, GLOBAL_ES_ADDR, CanBus, CarControllerParams, SubaruFlags
 from opendbc.car.vehicle_model import VehicleModel
 
 from opendbc.sunnypilot.car.subaru.stop_and_go import SnGCarController
@@ -16,9 +16,9 @@ MAX_STEER_RATE_FRAMES = 7  # tx control frames needed before torque can be cut
 
 
 def get_safety_CP():
-  # Use the Ascent for lateral limiting to match panda safety's most restrictive Subaru model.
+  # Only the validated Gen3 Crosstrek angle platform is control-enabled.
   from opendbc.car.subaru.interface import CarInterface
-  return CarInterface.get_non_essential_params("SUBARU_ASCENT")
+  return CarInterface.get_non_essential_params(CAR.SUBARU_CROSSTREK_2025)
 
 
 class CarController(CarControllerBase, SnGCarController):
@@ -36,7 +36,7 @@ class CarController(CarControllerBase, SnGCarController):
     self.packer = CANPacker(DBC[CP.carFingerprint][Bus.pt])
 
     if CP.flags & SubaruFlags.LKAS_ANGLE:
-      self.VM = VehicleModel(get_safety_CP())
+      self.VM = VehicleModel(CP)
 
   def lateral_angle(self, CC, CS):
     abs_torque = abs(CS.out.steeringTorque)
@@ -45,7 +45,16 @@ class CarController(CarControllerBase, SnGCarController):
     elif abs_torque < self.p.STEER_OVERRIDE_TORQUE_LOW:
       self.driver_override = False
 
-    lat_active = CC.latActive and not self.driver_override
+    # Subaru angle LKAS cannot accept MADS-only requests while selfdrive is disabled.
+    # Panda rejects those requests, which creates a gap in the required 50 Hz angle stream
+    # and causes the EPS to latch a permanent fault.
+    lat_active = CC.enabled and CC.latActive and not self.driver_override
+    # Do not keep LKAS_Request asserted while the wheel is already beyond the
+    # active-angle ceiling. The EPS can latch a permanent fault even when the
+    # requested angle itself is clamped to the ceiling.
+    if lat_active and abs(CS.out.steeringAngleDeg) >= self.p.ACTIVE_ANGLE_MAX:
+      lat_active = False
+
     if lat_active:
       apply_angle = CC.actuators.steeringAngleDeg
       # Suppress low-speed hunting caused by coarse angle sensing/EPS actuation.
@@ -82,19 +91,36 @@ class CarController(CarControllerBase, SnGCarController):
 
   @staticmethod
   def longitudinal_commands(accel, v_ego):
+    throttle_base = np.interp(v_ego, CarControllerParams.LONG_SPEED_BP, CarControllerParams.THROTTLE_BASE_V)
+    rpm_base = np.interp(v_ego, CarControllerParams.LONG_SPEED_BP, CarControllerParams.RPM_BASE_V)
+
     if accel >= 0.:
-      throttle_base = np.interp(v_ego, CarControllerParams.LONG_SPEED_BP, CarControllerParams.THROTTLE_BASE_V)
       throttle_max = np.interp(v_ego, CarControllerParams.LONG_SPEED_BP, CarControllerParams.THROTTLE_MAX_V)
-      rpm_base = np.interp(v_ego, CarControllerParams.LONG_SPEED_BP, CarControllerParams.RPM_BASE_V)
       rpm_max = np.interp(v_ego, CarControllerParams.LONG_SPEED_BP, CarControllerParams.RPM_MAX_V)
       throttle = np.interp(accel, [0., 2.], [throttle_base, throttle_max])
       rpm = np.interp(accel, [0., 2.], [rpm_base, rpm_max])
       brake = 0.
     else:
-      max_brake = np.interp(v_ego, CarControllerParams.LONG_SPEED_BP, CarControllerParams.BRAKE_MAX_V)
-      throttle = CarControllerParams.THROTTLE_ENGINE_BRAKE
-      rpm = np.interp(v_ego, CarControllerParams.LONG_SPEED_BP, CarControllerParams.BRAKE_RPM_V)
-      brake = np.interp(accel, [-3.5, 0.], [max_brake, 0.])
+      brake_start_accel = np.interp(v_ego, CarControllerParams.LONG_SPEED_BP, CarControllerParams.BRAKE_START_ACCEL_V)
+      brake_rpm = np.interp(v_ego, CarControllerParams.LONG_SPEED_BP, CarControllerParams.BRAKE_RPM_V)
+
+      if accel > brake_start_accel:
+        # Stock EyeSight does not jump straight from cruising torque to engine braking.
+        # It first unwinds toward the inactive 1818 command, then reaches 808 at
+        # the point where hydraulic braking begins.
+        coast_midpoint = brake_start_accel / 2.
+        if accel < coast_midpoint:
+          throttle = np.interp(accel, [brake_start_accel, coast_midpoint],
+                               [CarControllerParams.THROTTLE_ENGINE_BRAKE, CarControllerParams.THROTTLE_INACTIVE])
+        else:
+          throttle = np.interp(accel, [coast_midpoint, 0.], [CarControllerParams.THROTTLE_INACTIVE, throttle_base])
+        rpm = np.interp(accel, [brake_start_accel, 0.], [brake_rpm, rpm_base])
+        brake = 0.
+      else:
+        max_brake = np.interp(v_ego, CarControllerParams.LONG_SPEED_BP, CarControllerParams.BRAKE_MAX_V)
+        throttle = CarControllerParams.THROTTLE_ENGINE_BRAKE
+        rpm = brake_rpm
+        brake = np.interp(accel, [-3.5, brake_start_accel], [max_brake, 0.])
 
     return int(round(throttle)), int(round(rpm)), int(round(brake))
 

@@ -9,7 +9,6 @@ from opendbc.car import CanSignalRateCalculator
 from opendbc.sunnypilot.car.subaru.mads import MadsCarState
 from opendbc.sunnypilot.car.subaru.stop_and_go import SnGCarState
 
-
 class CarState(CarStateBase, MadsCarState, SnGCarState):
   BSM_STALE_FRAMES = 20
   BSM_APPROACHING_HOLD_FRAMES = 100
@@ -27,11 +26,36 @@ class CarState(CarStateBase, MadsCarState, SnGCarState):
     self.left_approaching_hold_frames = 0
     self.right_approaching_hold_frames = 0
     self.sonar_stale_frames = self.SONAR_STALE_FRAMES + 1
+    self.gen3_cruise_main_prev: bool | None = None
 
   @staticmethod
   def _feature_state(available, disabled):
     # Matches the stock camera's state mapping recovered from cs_eyesight.c.
     return 1 if available else (3 if disabled else 2)
+
+  def update_alpha_long_cruise_state(self, cp_alt, ret):
+    # EyeSight is disabled in alpha long, so engagement cannot be inferred from
+    # our own replacement ES_Status. The observed Gen3 CruiseControl payload has
+    # a dedicated active-low main state at bit 28; the legacy Cruise_On and
+    # Cruise_Activated definitions do not change with the car's ACC state.
+    main_on = not bool(cp_alt.vl["CruiseControl"]["Gen3_Cruise_Off"])
+    ret.cruiseState.enabled = False
+    ret.cruiseState.available = main_on
+    # Direct longitudinal actuation can restart without a stock ACC resume command.
+    # A stale EyeSight standstill bit would otherwise trap longcontrol in its stopping state.
+    ret.cruiseState.standstill = False
+
+    ret.buttonEvents = []
+    # The broadcast 0x146 Set/Resume definitions remain zero on the Gen3 routes.
+    # Use a deliberate cruise-main off-to-on edge as a virtual Set release instead:
+    # this initializes openpilot's set speed at the current vehicle speed and is
+    # mirrored by Panda safety. The first observed main-on frame never auto-engages.
+    if self.gen3_cruise_main_prev is not None and main_on and not self.gen3_cruise_main_prev and not ret.brakePressed and not ret.gasPressed:
+      event = structs.CarState.ButtonEvent.new_message()
+      event.type = structs.CarState.ButtonEvent.Type.decelCruise
+      event.pressed = False
+      ret.buttonEvents = [event]
+    self.gen3_cruise_main_prev = main_on
 
   def update_subaru_surroundings(self, cp, cp_cam, ret, ret_sp):
     if self.CP.enableBsm:
@@ -148,9 +172,12 @@ class CarState(CarStateBase, MadsCarState, SnGCarState):
     cp_es_brake = cp_alt if self.CP.flags & SubaruFlags.GLOBAL_GEN2 else cp_cam
 
     if self.CP.flags & SubaruFlags.LKAS_ANGLE:
-      # ES_Brake remains high when braking at a stop; ES_Status tracks the actual ACC engagement state.
-      ret.cruiseState.enabled = cp_es_brake.vl["ES_Status"]['Cruise_Activated'] != 0
-      ret.cruiseState.available = cp_cam.vl["ES_DashStatus"]['Cruise_On'] != 0
+      if self.CP.openpilotLongitudinalControl:
+        self.update_alpha_long_cruise_state(cp_alt, ret)
+      else:
+        # ES_Brake remains high when braking at a stop; ES_Status tracks the actual ACC engagement state.
+        ret.cruiseState.enabled = cp_es_brake.vl["ES_Status"]['Cruise_Activated'] != 0
+        ret.cruiseState.available = cp_cam.vl["ES_DashStatus"]['Cruise_On'] != 0
     elif self.CP.flags & SubaruFlags.HYBRID:
       ret.cruiseState.enabled = cp_es_brake.vl["ES_Brake"]['Cruise_Activated'] != 0
       ret.cruiseState.available = cp_cam.vl["ES_DashStatus"]['Cruise_On'] != 0
@@ -175,19 +202,22 @@ class CarState(CarStateBase, MadsCarState, SnGCarState):
       self.ready = not cp_cam.vl["ES_DashStatus"]["Not_Ready_Startup"]
     else:
       ret.steerFaultTemporary = cp.vl["Steering_Torque"]["Steer_Warning"] == 1
-      ret.cruiseState.nonAdaptive = cp_cam.vl["ES_DashStatus"]["Conventional_Cruise"] == 1
-      ret.cruiseState.standstill = cp_cam.vl["ES_DashStatus"]["Cruise_State"] == 3
-      ret.stockFcw = (cp_cam.vl["ES_LKAS_State"]["LKAS_Alert"] == 1) or \
-                     (cp_cam.vl["ES_LKAS_State"]["LKAS_Alert"] == 2)
+      if not self.CP.openpilotLongitudinalControl:
+        ret.cruiseState.nonAdaptive = cp_cam.vl["ES_DashStatus"]["Conventional_Cruise"] == 1
+        ret.cruiseState.standstill = cp_cam.vl["ES_DashStatus"]["Cruise_State"] == 3
+        ret.stockFcw = (cp_cam.vl["ES_LKAS_State"]["LKAS_Alert"] == 1) or \
+                       (cp_cam.vl["ES_LKAS_State"]["LKAS_Alert"] == 2)
 
       self.es_lkas_state_msg = copy.copy(cp_cam.vl["ES_LKAS_State"])
       self.es_brake_msg = copy.copy(cp_es_brake.vl["ES_Brake"])
 
       # TODO: Hybrid cars don't have ES_Distance, need a replacement
       if not (self.CP.flags & SubaruFlags.HYBRID):
-        # 8 is known AEB, there are a few other values related to AEB we ignore
-        ret.stockAeb = (cp_es_distance.vl["ES_Brake"]["AEB_Status"] == 8) and \
-                       (cp_es_distance.vl["ES_Brake"]["Brake_Pressure"] != 0)
+        # EyeSight is silent in alpha long, so its final AEB state must not remain latched in CarState.
+        if not self.CP.openpilotLongitudinalControl:
+          # 8 is known AEB, there are a few other values related to AEB we ignore
+          ret.stockAeb = (cp_es_distance.vl["ES_Brake"]["AEB_Status"] == 8) and \
+                         (cp_es_distance.vl["ES_Brake"]["Brake_Pressure"] != 0)
 
         self.es_status_msg = copy.copy(cp_es_brake.vl["ES_Status"])
         self.cruise_control_msg = copy.copy(cp_cruise.vl["CruiseControl"])

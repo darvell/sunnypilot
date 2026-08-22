@@ -15,8 +15,10 @@ from functools import partial
 
 class SubaruMsg(enum.IntEnum):
   Brake_Status      = 0x13c
+  Cruise_Buttons    = 0x146
   CruiseControl     = 0x240
   Throttle          = 0x40
+  Brake_Pedal       = 0x139
   Steering_Torque   = 0x119
   Steering_2        = 0x11a
   Wheel_Speeds      = 0x13a
@@ -59,8 +61,12 @@ def gen2_long_additional_tx_msgs():
           [SubaruMsg.ES_STATIC_2, SUBARU_MAIN_BUS]]
 
 
-def fwd_blacklisted_addr(lkas_msg=SubaruMsg.ES_LKAS):
-  return {SUBARU_CAM_BUS: [lkas_msg, SubaruMsg.ES_DashStatus, SubaruMsg.ES_LKAS_State, SubaruMsg.ES_Infotainment]}
+def fwd_blacklisted_addr(lkas_msg=SubaruMsg.ES_LKAS, stop_and_go=False):
+  camera_addrs = [lkas_msg, SubaruMsg.ES_DashStatus, SubaruMsg.ES_LKAS_State, SubaruMsg.ES_Infotainment]
+  blacklisted = {SUBARU_CAM_BUS: camera_addrs}
+  if stop_and_go:
+    blacklisted[SUBARU_MAIN_BUS] = [SubaruMsg.Throttle, SubaruMsg.Brake_Pedal]
+  return blacklisted
 
 
 class TestSubaruSafetyBase(common.CarSafetyTest):
@@ -373,6 +379,77 @@ class TestSubaruGen2AngleLongitudinalSafety(SubaruDynamicLongitudinalSafetyMixin
     SUBARU_ALT_BUS: (SubaruMsg.ES_Brake, SubaruMsg.ES_Distance, SubaruMsg.ES_Status),
   }
   FWD_BLACKLISTED_ADDRS = fwd_blacklisted_addr(SubaruMsg.ES_LKAS_ANGLE)
+
+  def _cruise_control_msg(self, main):
+    values = {"Gen3_Cruise_Off": not main}
+    return self.packer.make_can_msg_safety("CruiseControl", SUBARU_ALT_BUS, values)
+
+  # Stock EyeSight's cruise state is bypassed under openpilot longitudinal control.
+  def test_disable_control_allowed_from_cruise(self):
+    pass
+
+  def test_enable_control_allowed_from_cruise(self):
+    pass
+
+  def test_cruise_engaged_prev(self):
+    pass
+
+  # EyeSight is silent in alpha long, so its LKAS HUD button is unavailable.
+  def test_enable_control_allowed_with_mads_button(self):
+    pass
+
+  def test_engage_with_brake_pressed(self):
+    pass
+
+  def test_broadcast_button_bits_do_not_enable(self):
+    self._rx(self._cruise_control_msg(True))
+    for values in ({"Main": 1}, {"Set": 1}, {"Resume": 1}, {}):
+      self._rx(self.packer.make_can_msg_safety("Cruise_Buttons", SUBARU_ALT_BUS, values))
+      self.assertFalse(self.safety.get_controls_allowed())
+
+  def test_main_switch_edge_enables(self):
+    # Initial main-on state is only a baseline and never auto-engages.
+    self._rx(self._cruise_control_msg(True))
+    self.assertFalse(self.safety.get_controls_allowed())
+
+    self._rx(self._cruise_control_msg(False))
+    self.assertFalse(self.safety.get_controls_allowed())
+    self._rx(self._cruise_control_msg(True))
+    self.assertTrue(self.safety.get_controls_allowed())
+
+  def test_main_switch_edge_does_not_enable_with_brake(self):
+    self._rx(self._cruise_control_msg(True))
+    self._rx(self._cruise_control_msg(False))
+    self._rx(self._user_brake_msg(True))
+    self._rx(self._cruise_control_msg(True))
+    self.assertFalse(self.safety.get_controls_allowed())
+
+  def test_main_switch_edge_does_not_enable_with_gas(self):
+    self._rx(self._cruise_control_msg(True))
+    self._rx(self._cruise_control_msg(False))
+    self._rx(self._user_gas_msg(1))
+    self._rx(self._cruise_control_msg(True))
+    self.assertFalse(self.safety.get_controls_allowed())
+
+  def test_main_switch_off_disables(self):
+    self._rx(self._cruise_control_msg(True))
+    self.safety.set_controls_allowed(True)
+    self._rx(self._cruise_control_msg(False))
+    self.assertFalse(self.safety.get_controls_allowed())
+
+  def test_captured_gen3_main_frames(self):
+    main_off = libsafety_py.make_CANPacket(SubaruMsg.CruiseControl, SUBARU_ALT_BUS,
+                                           bytes.fromhex("b30c001013008ab8"))
+    main_on = libsafety_py.make_CANPacket(SubaruMsg.CruiseControl, SUBARU_ALT_BUS,
+                                          bytes.fromhex("c30d00a054408ab6"))
+
+    self.safety.set_controls_allowed(True)
+    self.assertTrue(self._rx(main_off))
+    self.assertFalse(self.safety.get_controls_allowed())
+
+    self.safety.set_controls_allowed(False)
+    self.assertTrue(self._rx(main_on))
+    self.assertTrue(self.safety.get_controls_allowed())
 
 
 if __name__ == "__main__":

@@ -38,9 +38,15 @@ class SubaruSettings(BrandSettings):
     if bundle:
       platform = bundle.get("platform")
       config = CAR[platform].config
-      self.has_stop_and_go = not (config.flags & (SubaruFlags.GLOBAL_GEN2 | SubaruFlags.HYBRID))
+      self.has_stop_and_go = (platform == CAR.SUBARU_CROSSTREK_2025) or not (config.flags & (SubaruFlags.GLOBAL_GEN2 | SubaruFlags.HYBRID))
     elif ui_state.CP is not None:
-      self.has_stop_and_go = not (ui_state.CP.flags & (SubaruFlags.GLOBAL_GEN2 | SubaruFlags.HYBRID))
+      self.has_stop_and_go = (ui_state.CP.carFingerprint == CAR.SUBARU_CROSSTREK_2025) or not (
+        ui_state.CP.flags & (SubaruFlags.GLOBAL_GEN2 | SubaruFlags.HYBRID))
+
+    # Alpha longitudinal owns the EyeSight actuation path; stock stop-and-go
+    # resume frames must not be enabled at the same time.
+    if ui_state.params.get_bool("AlphaLongitudinalEnabled"):
+      self.has_stop_and_go = False
 
     disabled_msg = self.stop_and_go_disabled_msg()
     descriptions = [
