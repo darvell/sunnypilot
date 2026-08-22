@@ -49,6 +49,7 @@ class TestSubaruPreDisable(unittest.TestCase):
     self.assertFalse(self.car.eyesight_pre_disabled)
     disable_ecu.assert_not_called()
 
+  @patch("opendbc.car.subaru.values.GEN3_LONGITUDINAL_READY", False)
   @patch("opendbc.car.disable_ecu.disable_ecu")
   def test_feature_gate_prevents_eyesight_disable(self, disable_ecu):
     self.car.params = self.params(True, CAR.SUBARU_CROSSTREK_2025)
