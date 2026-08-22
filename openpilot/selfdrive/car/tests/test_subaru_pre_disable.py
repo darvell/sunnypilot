@@ -24,6 +24,7 @@ class TestSubaruPreDisable(unittest.TestCase):
     params.get.side_effect = lambda key: ({"platform": platform} if key == "CarPlatformBundle" and platform else None)
     return params
 
+  @patch("opendbc.car.subaru.values.GEN3_LONGITUDINAL_READY", True)
   @patch("opendbc.car.disable_ecu.disable_ecu", return_value=True)
   def test_forced_crosstrek_is_disabled_before_fingerprinting(self, disable_ecu):
     self.car.params = self.params(True, CAR.SUBARU_CROSSTREK_2025)
@@ -48,6 +49,16 @@ class TestSubaruPreDisable(unittest.TestCase):
     self.assertFalse(self.car.eyesight_pre_disabled)
     disable_ecu.assert_not_called()
 
+  @patch("opendbc.car.subaru.values.GEN3_LONGITUDINAL_READY", False)
+  @patch("opendbc.car.disable_ecu.disable_ecu")
+  def test_feature_gate_prevents_eyesight_disable(self, disable_ecu):
+    self.car.params = self.params(True, CAR.SUBARU_CROSSTREK_2025)
+    self.car._maybe_pre_disable_subaru_eyesight()
+    self.car.params.put_bool.assert_called_once_with("AlphaLongitudinalEnabled", False, block=True)
+    self.assertFalse(self.car.eyesight_pre_disabled)
+    disable_ecu.assert_not_called()
+
+  @patch("opendbc.car.subaru.values.GEN3_LONGITUDINAL_READY", True)
   @patch("opendbc.car.disable_ecu.disable_ecu")
   def test_alpha_long_is_disabled_without_cached_or_forced_crosstrek(self, disable_ecu):
     self.car.params = self.params(True)
@@ -55,6 +66,7 @@ class TestSubaruPreDisable(unittest.TestCase):
     self.car.params.put_bool.assert_called_once_with("AlphaLongitudinalEnabled", False, block=True)
     disable_ecu.assert_not_called()
 
+  @patch("opendbc.car.subaru.values.GEN3_LONGITUDINAL_READY", True)
   @patch("opendbc.car.disable_ecu.disable_ecu", return_value=False)
   def test_alpha_long_is_disabled_when_eyesight_knockout_fails(self, _disable_ecu):
     self.car.params = self.params(True, CAR.SUBARU_CROSSTREK_2025)
