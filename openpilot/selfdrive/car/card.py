@@ -89,7 +89,6 @@ class Car:
     self.eyesight_pre_disabled = False
     self.eyesight_keepalive_stop = threading.Event()
     self.eyesight_keepalive_thread: threading.Thread | None = None
-    self._maybe_pre_disable_subaru_eyesight()
 
     is_release = False  # self.params.get_bool("IsReleaseBranch")
     is_release_sp = self.params.get_bool("IsReleaseSpBranch")
@@ -114,7 +113,8 @@ class Car:
       init_params_list_sp = sunnypilot_interfaces.initialize_params(self.params)
 
       self.CI = get_car(*self.can_callbacks, obd_callback(self.params), alpha_long_allowed, is_release, cached_params,
-                        fixed_fingerprint, init_params_list_sp, is_release_sp)
+                        fixed_fingerprint, init_params_list_sp, is_release_sp,
+                        post_fingerprint_callback=self._maybe_disable_subaru_eyesight)
       sunnypilot_interfaces.setup_interfaces(self.CI, self.params)
       self.RI = interfaces[self.CI.CP.carFingerprint].RadarInterface(self.CI.CP, self.CI.CP_SP)
       self.CP = self.CI.CP
@@ -198,44 +198,62 @@ class Car:
     while not self.eyesight_keepalive_stop.wait(0.5):
       self.can_callbacks[1]([tester_present])
 
-  def _maybe_pre_disable_subaru_eyesight(self) -> None:
-    if not self.params.get_bool("AlphaLongitudinalEnabled") or not self.params.get_bool("OpenpilotEnabledToggle"):
-      return
+  @staticmethod
+  def _subaru_eyesight_traffic_present(can_packets: list[list[CanData]]) -> bool:
+    stock_eyesight_addrs = {0x124, 0x220, 0x221, 0x222}
+    return any(msg.src in (0, 1, 2) and msg.address in stock_eyesight_addrs
+               for packet in can_packets for msg in packet)
+
+  def _verify_subaru_eyesight_silenced(self, timeout: float = 0.5) -> bool:
+    self.can_callbacks[0]()  # discard traffic queued before the communication-control response
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+      if self._subaru_eyesight_traffic_present(self.can_callbacks[0](wait_for_one=True)):
+        return False
+    return True
+
+  def _check_subaru_eyesight_remains_silenced(self, can_packets: list[list[CanData]]) -> None:
+    if self.CP.openpilotLongitudinalControl and self._subaru_eyesight_traffic_present(can_packets):
+      cloudlog.error("stock EyeSight traffic resumed during Subaru alpha long; falling back to stock longitudinal")
+      self.params.put_bool("AlphaLongitudinalEnabled", False, block=True)
+      raise RuntimeError("stock EyeSight traffic resumed during Subaru alpha long")
+
+  def _maybe_disable_subaru_eyesight(self, candidate: str | None) -> bool:
+    if not self.params.get_bool("OpenpilotEnabledToggle"):
+      return False
 
     from opendbc.car import uds
     from opendbc.car.disable_ecu import disable_ecu
-    from opendbc.car.subaru.values import CAR, GEN3_LONGITUDINAL_READY, GLOBAL_ES_ADDR, SubaruFlags
+    from opendbc.car.subaru.values import CAR, GEN3_LONGITUDINAL_READY, GLOBAL_ES_ADDR
 
     if not GEN3_LONGITUDINAL_READY:
-      cloudlog.warning("Subaru alpha long remains gated until the Gen3 EyeSight button DID is verified")
+      cloudlog.warning("Subaru alpha long remains gated until the Gen3 EyeSight disable path is verified")
       self.params.put_bool("AlphaLongitudinalEnabled", False, block=True)
-      return
+      return False
 
-    forced_platform = (self.params.get("CarPlatformBundle") or {}).get("platform", None)
-    is_crosstrek = forced_platform == CAR.SUBARU_CROSSTREK_2025
-    cached_raw = self.params.get("CarParamsCache")
-    if cached_raw is not None:
-      try:
-        with car.CarParams.from_bytes(cached_raw) as cached_cp:
-          is_crosstrek |= cached_cp.carFingerprint == CAR.SUBARU_CROSSTREK_2025 and bool(cached_cp.flags & SubaruFlags.LKAS_ANGLE)
-      except Exception:
-        cloudlog.exception("failed to read cached CarParams for Subaru pre-disable")
-
-    if not is_crosstrek:
-      cloudlog.warning("Subaru alpha long requested without a cached/forced Gen3 Crosstrek; disabling alpha long for this boot")
+    if candidate != CAR.SUBARU_CROSSTREK_2025:
+      cloudlog.warning("Subaru alpha long requested on an unsupported platform; disabling alpha long for this boot")
       self.params.put_bool("AlphaLongitudinalEnabled", False, block=True)
-      return
+      return False
 
+    # Firmware queries return EyeSight to the default diagnostic session, so the
+    # knockout must happen after fingerprinting and before CarParams enables LONG.
     communication_control = bytes([uds.SERVICE_TYPE.COMMUNICATION_CONTROL, uds.CONTROL_TYPE.DISABLE_RX_DISABLE_TX, uds.MESSAGE_TYPE.NORMAL])
     self.eyesight_pre_disabled = disable_ecu(*self.can_callbacks, bus=2, addr=GLOBAL_ES_ADDR,
                                              com_cont_req=communication_control, timeout=0.2, retry=3)
+    if self.eyesight_pre_disabled and not self._verify_subaru_eyesight_silenced():
+      cloudlog.error("EyeSight communication control was acknowledged but stock actuation traffic remained")
+      self.eyesight_pre_disabled = False
+
     if self.eyesight_pre_disabled:
-      cloudlog.warning("EyeSight disabled before fingerprinting for Subaru alpha long")
+      cloudlog.warning("EyeSight disabled and verified silent after fingerprinting for Subaru alpha long")
       self.eyesight_keepalive_thread = threading.Thread(target=self._eyesight_keepalive_loop, daemon=True)
       self.eyesight_keepalive_thread.start()
-    else:
-      cloudlog.error("pre-engine EyeSight disable failed; disabling Subaru alpha long for this boot")
-      self.params.put_bool("AlphaLongitudinalEnabled", False, block=True)
+      return True
+
+    cloudlog.error("EyeSight disable failed; falling back to stock longitudinal for this boot")
+    self.params.put_bool("AlphaLongitudinalEnabled", False, block=True)
+    return False
 
   def _stop_eyesight_keepalive(self) -> None:
     self.eyesight_keepalive_stop.set()
@@ -247,6 +265,7 @@ class Car:
 
     can_strs = messaging.drain_sock_raw(self.can_sock, wait_for_one=True)
     can_list = can_capnp_to_list(can_strs)
+    self._check_subaru_eyesight_remains_silenced(can_list)
 
     # Update carState from CAN
     CS, CS_SP = self.CI.update(can_list)
