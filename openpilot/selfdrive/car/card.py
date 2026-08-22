@@ -204,7 +204,12 @@ class Car:
 
     from opendbc.car import uds
     from opendbc.car.disable_ecu import disable_ecu
-    from opendbc.car.subaru.values import CAR, GLOBAL_ES_ADDR, SubaruFlags
+    from opendbc.car.subaru.values import CAR, GEN3_LONGITUDINAL_READY, GLOBAL_ES_ADDR, SubaruFlags
+
+    if not GEN3_LONGITUDINAL_READY:
+      cloudlog.warning("Subaru alpha long remains gated until the Gen3 EyeSight button DID is verified")
+      self.params.put_bool("AlphaLongitudinalEnabled", False, block=True)
+      return
 
     forced_platform = (self.params.get("CarPlatformBundle") or {}).get("platform", None)
     is_crosstrek = forced_platform == CAR.SUBARU_CROSSTREK_2025
