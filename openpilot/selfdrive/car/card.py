@@ -20,6 +20,7 @@ from opendbc.car.car_helpers import get_car, interfaces
 from opendbc.car.interfaces import CarInterfaceBase, RadarInterfaceBase
 from openpilot.selfdrive.pandad import can_capnp_to_list, can_list_to_can_capnp
 from openpilot.selfdrive.car.cruise import VCruiseHelper
+from openpilot.selfdrive.car.subaru_eyesight import EngineOffObservation, eyesight_traffic_present, observe_engine_off
 from openpilot.selfdrive.car.helpers import convert_carControlSP, convert_to_capnp
 
 from openpilot.sunnypilot.mads.helpers import set_alternative_experience, set_car_specific_params
@@ -200,21 +201,17 @@ class Car:
 
   @staticmethod
   def _subaru_eyesight_traffic_present(can_packets: list[list[CanData]]) -> bool:
-    stock_eyesight_addrs = {0x124, 0x220, 0x221, 0x222}
-    return any(msg.src in (0, 1, 2) and msg.address in stock_eyesight_addrs
-               for packet in can_packets for msg in packet)
+    return eyesight_traffic_present(can_packets)
 
-  def _verify_subaru_eyesight_silenced(self, timeout: float = 0.5) -> bool:
-    self.can_callbacks[0]()  # discard traffic queued before the communication-control response
-    deadline = time.monotonic() + timeout
-    while time.monotonic() < deadline:
-      if self._subaru_eyesight_traffic_present(self.can_callbacks[0](wait_for_one=True)):
-        return False
-    return True
+  def _verify_subaru_eyesight_silenced(self) -> bool:
+    evidence = observe_engine_off(self.can_callbacks[0], expect_silence=True)
+    if not evidence.qualified:
+      cloudlog.error(f"EyeSight silence observation failed: {evidence.reason}")
+    return evidence.qualified
 
   def _check_subaru_eyesight_remains_silenced(self, can_packets: list[list[CanData]]) -> None:
     if self.CP.openpilotLongitudinalControl and self._subaru_eyesight_traffic_present(can_packets):
-      cloudlog.error("stock EyeSight traffic resumed during Subaru alpha long; falling back to stock longitudinal")
+      cloudlog.error("stock EyeSight traffic resumed; Subaru alpha long unavailable, no verified stock handover")
       self.params.put_bool("AlphaLongitudinalEnabled", False, block=True)
       raise RuntimeError("stock EyeSight traffic resumed during Subaru alpha long")
 
@@ -236,24 +233,48 @@ class Car:
       self.params.put_bool("AlphaLongitudinalEnabled", False, block=True)
       return False
 
+    # A parked engine-off observation must precede any diagnostic intervention. A zero-initialized or
+    # stale RPM value is not evidence that the engine is off; include wheel/gear/pedal/fault history.
+    guard = EngineOffObservation(time.monotonic(), expect_silence=False)
+    evidence = observe_engine_off(self.can_callbacks[0], expect_silence=False, observation=guard)
+    if not evidence.qualified:
+      cloudlog.error(f"Subaru alpha long not attempted: {evidence.reason}")
+      self.params.put_bool("AlphaLongitudinalEnabled", False, block=True)
+      return False
+
     # Firmware queries return EyeSight to the default diagnostic session, so the
     # knockout must happen after fingerprinting and before CarParams enables LONG.
     communication_control = bytes([uds.SERVICE_TYPE.COMMUNICATION_CONTROL, uds.CONTROL_TYPE.DISABLE_RX_DISABLE_TX, uds.MESSAGE_TYPE.NORMAL])
-    self.eyesight_pre_disabled = disable_ecu(*self.can_callbacks, bus=2, addr=GLOBAL_ES_ADDR,
-                                             com_cont_req=communication_control, timeout=0.2, retry=3)
-    if self.eyesight_pre_disabled and not self._verify_subaru_eyesight_silenced():
-      cloudlog.error("EyeSight communication control was acknowledged but stock actuation traffic remained")
-      self.eyesight_pre_disabled = False
+    # Keep the qualified baseline's stream ages/counters. A nonblocking ISO-TP drain may legitimately
+    # contain only a subset (or no frames), and is not a new complete observation window.
+    def guarded_receive(wait_for_one=False):
+      packets = self.can_callbacks[0](wait_for_one=wait_for_one)
+      guard.update(packets, time.monotonic())
+      return packets
 
+    def guarded_send(messages):
+      # ISO-TP drains receive before each request. Crank/pedal/motion observed during the extended-session
+      # exchange must prevent the following CommunicationControl request, not merely fail a later check.
+      if guard.failure or any(key not in guard.last or time.monotonic() - guard.last[key] > 0.1 for key in guard.required):
+        raise RuntimeError("Subaru engine-off conditions changed during diagnostic exchange")
+      self.can_callbacks[1](messages)
+
+    self.eyesight_pre_disabled = disable_ecu(guarded_receive, guarded_send, bus=2, addr=GLOBAL_ES_ADDR,
+                                             com_cont_req=communication_control, timeout=0.2, retry=1)
     if self.eyesight_pre_disabled:
-      cloudlog.warning("EyeSight disabled and verified silent after fingerprinting for Subaru alpha long")
       self.eyesight_keepalive_thread = threading.Thread(target=self._eyesight_keepalive_loop, daemon=True)
       self.eyesight_keepalive_thread.start()
-      return True
+      if self._verify_subaru_eyesight_silenced():
+        cloudlog.warning("EyeSight silence observed after fingerprinting; crank survival remains unverified")
+        return True
 
-    cloudlog.error("EyeSight disable failed; falling back to stock longitudinal for this boot")
+    # A timeout can mean the command took effect but its reply was lost. Even a positive reply followed
+    # by receive loss leaves ownership indeterminate. Do not construct stock CarParams and pretend the
+    # ECU was restored. End this parked startup; a separately verified offroad recovery is required.
+    self.eyesight_pre_disabled = False
+    self._stop_eyesight_keepalive()
     self.params.put_bool("AlphaLongitudinalEnabled", False, block=True)
-    return False
+    raise RuntimeError("Subaru EyeSight ownership indeterminate after diagnostic attempt; startup unavailable")
 
   def _stop_eyesight_keepalive(self) -> None:
     self.eyesight_keepalive_stop.set()
