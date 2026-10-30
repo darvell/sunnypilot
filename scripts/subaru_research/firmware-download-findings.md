@@ -114,6 +114,30 @@ A single credential-free HEAD request to the exact configured Red Bend `/dm` ori
 
 The exact remaining acquisition operation is a successful authorized client-initiated DM exchange with the actual runtime profile/account, producing a real SCOMO package URL, or a legitimately obtained package/session response. The server-selected URL cannot be calculated by substituting a firmware filename into the factory placeholder. The release identity is now verified; the RC8 package bytes are still unavailable in the examined sources.
 
+## 5. Concrete factory authentication and missing runtime inputs
+
+The next pass decoded the same factory management tree independently in host memory and validated the 19,197-byte XML. The account is not an empty placeholder: both `AppAuth/CLIENT` (CLCRED) and `AppAuth/APPSRV` (SRVCRED) explicitly select **BASIC**, with nonempty authentication-name, secret and auth-data fields. No credential values or decoded tree are included here. This is **SyncML/OMA-DM authentication configuration**, not evidence that HTTP Basic Authorization will work, nor proof that a current server accepts the factory credentials.
+
+There is no AAuthPref/AuthPref leaf. `SESS_setupSession:0x550BA2` selects the configured client type in that case; HMAC is an error fallback, not the decoded factory account's setting. A fresh bootstrap is not required by the inspected stored-account trigger. A missing secret or mandatory new enrollment therefore cannot simply be assumed as the current blocker.
+
+Inventory is also more than a static DevInfo block. The factory `InventoryFields` setting is `Version`; the stored FullInventory leaf is empty because its external-storage callback computes the value dynamically. Registration `0x50CC4A` installs `VDM_SCOMO_Invoptimizer_getFullInventoryCB:0x50EEC6`, which reads components via `0x510C85` and serializes selected fields via `0x50EC1D`. The FW installer enumerator reaches inventory field 4 (FW_id), and attribute 2 reaches field 3 (FW_version). An empty factory inventory node is not evidence the real request has no firmware inventory. Complete server Get ordering and the accepted wire exchange remain unverified.
+
+### TLS propagation narrowed, not guessed from another vendor's profile
+
+The client-certificate flag is now traced through the actual DM stack: `SESS_openComms:0x5482FB` passes DM parameters into `VDM_HTTP_init:0x494CE7`; helper `0x494BB3` copies DM-parameter offset 88 into connection-parameter offset 48; `VDM_Comm_PL_Conn_init:0x435380` copies that to connection-object offset 56. `0x4354A0` conditionally loads `cert.pem` when that flag is nonzero.
+
+`VDM_Config_init:0x532BC7` registers the `dmserver` profile default as `any`. The shipped `dma_config.txt` does not select another profile, and `soft_vup:0x5A1380` launches smm without command-line profile arguments. The only direct mandatory-certificate setter found in the inspected configuration callback `0x532786` is case 7, which also changes the SCOMO root to `./DevGateway/HU6/Components`. That unrelated profile must not be treated as proof that Subaru's current connection requires a client certificate. Runtime configuration, certificate availability, and accepted server policy are still unverified; no TLS check was disabled.
+
+### Actual local inputs and network result
+
+Presence-only inspection of the first saved carParams in each of the six complete incident routes found no usable 17-character VIN. Those entries contain engine, transmission, ABS and camera firmware, not a head-unit inventory/profile. No saved `INVENTORY.DAT` was found in the scoped firmware archive and no HAR capture was found in the project. These are bounded checks, not a claim that no such data exists elsewhere. No real vehicle identifiers were exported or sent.
+
+A normal credential-free GET to the exact configured `/dm` endpoint returned **405 with an empty body**, as did the earlier HEAD. Response headers show Cloudflare in the path; the observation does not identify which layer generated the response and is not proof of a successfully reached/accepted DM application. No credentials, VIN or session payload were submitted, and no response cookie was retained for reuse.
+
+The bulletin's actual Appendix 2 was inspected as well. It directs the RC8 dealer package through Subarunet's Service Operations and Technical -> Forms/Downloads -> Gen 4/Denso Audio/Navi, or through Nuspire's pushed files under the SDS notebook's `Denso CP1 Audio-Navi Update Files/CP15` folder. The PDF does not supply a direct firmware-object URL. The saved public SSM5 client contains the CCU-list call but no RC8 version literal or real RC8 object path; its embedded ZIP example belongs to test work-support data and is not a firmware source. The distributor's actual public page likewise provides a licensed download-center process, not the package URL.
+
+The direct SMM route now needs **the real head-unit updater profile and an accepted session**, not another guessed filename or a supposed absent factory password. A legitimately saved `INVENTORY.DAT`/session record, or the actual VIN plus head-unit hardware model/version and applicable runtime state, would supply missing evidence. Alternatively an authorized RC8 catalog response or the complete dealer USB package would provide the bytes directly. No installed profile was fabricated and no RC8 firmware bytes were retrieved in this pass.
+
 ## Sources and retained proof
 
 ```text
