@@ -20,6 +20,8 @@ The named IDA database was inspected without patching or saving over the origina
 
 Other variants were compared by their two matching application inventories and hardware filter structures. Their individual instruction-level consumers were not independently decompiled in this pass. Nothing here proves which VCPU version is installed in a particular vehicle.
 
+A subsequent release-table check found that Subaru's August 20, 2026 bulletin lists **F71SHV011-680 for the 2024 Impreza/Crosstrek**. The retained F71 payload matches that version and was rehashed successfully. Use F71 as the documented research target for that model year; do not carry this report's detailed FK1 addresses or per-message layouts into F71. The separate CAN-table comparison remains valid. See `firmware-download-findings.md` for the current release and acquisition evidence.
+
 ## Correct address interpretation
 
 The existing database was loaded at zero. Its labels such as `sub_383FC` are serialized file offsets, not the execution addresses stored in the firmware. Using them as execution addresses hides the table references.

@@ -41,7 +41,7 @@ configured DM account + runtime head-unit inventory
 -> local package staging
 ```
 
-`soft_vup:0x521E90` builds `INVENTORY.DAT` from the unit model and integrated version, using the six-character version prefix plus `_Firmware` as a component identifier. The observed update-family table at `0x6263E0` contains eight NAVI image families, and observed staging objects include `__SCOMO_RB_DP` and `ALLUPD-NAVI.pkg`.
+`soft_vup:0x521E90` builds `INVENTORY.DAT` from the unit model and integrated version, using the six-character version prefix plus `_Firmware` as `FW_id`. The separate field named `component_id` is `0`; these must not be confused. The observed update-family table at `0x6263E0` contains eight NAVI image families, and observed staging objects include `__SCOMO_RB_DP` and `ALLUPD-NAVI.pkg`.
 
 The shared proxy `http://ndeproxy:8080/` is explicitly supplied as both management and download proxy at `soft_vup:0x59C480`; it is not the origin. Generic Red Bend ECU-inventory support exists, but the supplied ECU inventory CSV is header-only. No mapping from meter/EyeSight identifiers to `.pfc` requests was established. Factory account contents are not proof of a particular vehicle's current provisioning or authorization; credentials, keys and the decoded tree are not exported here.
 
@@ -76,11 +76,56 @@ Subaru bulletin 14-28-21R, revised July 8, 2024, describes `.pfc` retrieval duri
 
 We have not established a download-only meter-export operation. Finishing payload retrieval requires an authorized SSM5 session/catalog response or a legitimately obtained `.pfc`/Cloud Connector package suitable for offline inspection. No account was purchased and no message sent to a distributor. No actual meter/camera firmware was downloaded.
 
+## 4. SMM follow-up and the current head-unit release
+
+### Release identity, not just a guessed suffix
+
+As of October 28, 2026, the newest dealer/USB release verified in Subaru's documentation is **RC8**, released **August 17, 2026**, in bulletin 15-305-22R revised August 20, 2026. Its page-31 table explicitly lists these 2024 Impreza/Crosstrek values:
+
+| Variant/component | Documented version |
+|---|---|
+| High MSOC | `FH1WHM205-280` |
+| Mid MSOC | `FH1WMM205-280` |
+| Base MSOC | `FH1WBM205-280` |
+| VCPU | `F71SHV011-680` |
+
+The actual PDF was downloaded from NHTSA and pages 4, 31 and 41 inspected, with page 31 rendered at readable resolution. Its SHA256 is `72760403ef0c6258ea58b31b1e972e69ad53a5f71c836ce88a6f9feda1dfef6e`. The older RC7/185-180 latest-release note is outdated. In particular, do not manufacture a new full identifier by appending `205-280` to the old `FM1WMM` prefix; the documented current Mid prefix is `FH1WMM`.
+
+The retained F71 payload was rechecked through `vcpu_can_inventory.py`: it reports exactly `F71SHV011-680`, SHA256 `716c0f0f9c3891b70ee4c0e62261f58b591edb1ff6fd1ae999c8d1a97ff78e5b`, with both bank inventories agreeing. Thus the archive already contains the VCPU version listed by that current bulletin. This is version correspondence, not proof that every byte matches a separately acquired RC8 package or that this ECU is installed in the car. The latest head-unit MSOC package itself has not been retrieved.
+
+Subaru's separate FOTA bulletin 15-311-23R, revised July 15, 2026, lists multiple FOTA suffixes and explicitly distinguishes them from dealer/USB releases. An SMM campaign result must not automatically be labeled the RC8 USB package.
+
+The maintainer's currently linked public CP1.5 folder was fetched anonymously and its visible filenames parsed: `FM1WxM073-980.zip` and `15-305-22R_061124.pdf`. No RC7/RC8 filename or version literal appears in that saved listing. This is a check of that specific mirror, not proof no other copy exists.
+
+### Additional update-discovery operations recovered
+
+Continuing past the URL getter established the actual initial request and response mechanism:
+
+- `soft_vup:0x59D860` can initiate a user update check without a DCM campaign notification. That does not prove operation without connectivity, provisioning or account authorization.
+- `smm.exe:0x54F809` constructs the client-initiated OMA-DM package with Alert 1201; `0x54F32F` serializes DevInfo as Replace items. A generic Alert 1226 carries the SCOMO request. XML/WBXML format, message/session counters, account auth and nonce state are part of the exchange. This is not a simple model/version GET.
+- SCOMO schema table `0x612D00` includes `PkgID`, `Name`, `PkgURL`, `InstallParams`, `Description`, `EnvType`, `PkgType`, integer `Status`, and operation children. Incoming Add/Replace commands supply package-tree state; `0x51C42A` receives a tree path, not a download URL literal. No accepted server response was captured.
+- The inventory is ten 32-byte records, each a four-byte length plus 28-byte payload. Its actual vendor is `SBR`; `DENSO` in a getter is an error/test fallback. The fields are model, VIN, vendor, firmware version, firmware ID, component ID, serial, product ID, component-unit flag and component address.
+
+The parent trace also resolved the previously missing DevId producer. `soft_vup:0x59D860` and `0x59EF60` handle `B2D_GET_DEV_ID` by calling `Rpvcmn_get_vin:0x555810`, then `0x599900` sends those bytes as `D2B_DEV_ID_RESPONSE` / `DMA_VAR_DEV_ID`. SMM handler `0x446E0C` passes that value to `DMA_redbend_SESS_devIdSyncDone:0x477020`, which copies it to `g_devId`; callback `0x4F57C5` supplies it for `./DevInfo/DevId`. **On this inspected path, DevId is VIN-sourced.** No actual VIN was read or exported.
+
+The model remains a separate hardware identifier. `soft_vup:0x4CE5C0` obtains a ten-character device-model/part identifier and derives a serial from that model plus a MAC-derived decimal value. `0x4DE980` caches them separately from VIN. The fallback part number and zero-like MAC data are not evidence of the actual unit; they must not be used as a fabricated live profile.
+
+A single credential-free HEAD request to the exact configured Red Bend `/dm` origin completed with **HTTP 405** and successful TLS verification. This establishes an HTTP response at that location, not a successful OMA-DM session, authorization, package catalog or current campaign. No authenticated request, VIN submission, fabricated inventory, bootstrap enrollment, update request, or install was sent.
+
+The exact remaining acquisition operation is a successful authorized client-initiated DM exchange with the actual runtime profile/account, producing a real SCOMO package URL, or a legitimately obtained package/session response. The server-selected URL cannot be calculated by substituting a firmware filename into the factory placeholder. The release identity is now verified; the RC8 package bytes are still unavailable in the examined sources.
+
 ## Sources and retained proof
 
 ```text
 Subaru SSM5 procedure, 14-28-21R, pp. 3, 6 and 8:
 https://static.nhtsa.gov/odi/tsbs/2024/MC-11005590-0001.pdf
+Current CP1.5 dealer/USB release bulletin, 15-305-22R revised August 20, 2026:
+https://static.nhtsa.gov/odi/tsbs/2026/MC-11036803-0001.pdf
+Current reviewed FOTA bulletin, 15-311-23R revised July 15, 2026:
+https://static.oemdtc.com/NHTSA-PDFs/MC-11035631-0001.pdf
+Public mirror maintainer and the specific folder inspected:
+https://www.gen6firmware.com/2020/07/2020-subaru-outback-504-update.html
+https://drive.google.com/drive/folders/1934DeFCbt_HCfl5JaINI8qkyyYCvcT8G?usp=sharing
 Official STIS:
 https://techinfo.subaru.com/stis/
 Public Special Tool Information route, resolved from STIS's actual client:
