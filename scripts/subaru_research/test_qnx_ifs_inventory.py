@@ -57,6 +57,22 @@ class TestQnxImageInventory(unittest.TestCase):
     with self.assertRaisesRegex(ValueError, "outside"):
       parse_directory(image)
 
+  def test_embedded_startup_header_requires_explicit_validated_offset(self):
+    image = imagefs()
+    embedded = bytes(0x224) + startup(image)
+    with patch("scripts.subaru_research.qnx_ifs_inventory.lzo_block", return_value=image):
+      with self.assertRaisesRegex(ValueError, "IFS header"):
+        unpack_image(embedded)
+      result, files, metadata = unpack_image(embedded, startup_offset=0x224)
+      self.assertEqual(result, image)
+      self.assertEqual(files[0].path, "usr/bin/MeterCore")
+      self.assertEqual(metadata["startupFileOffset"], 0x224)
+      for offset in (-1, len(embedded), 0x225):
+        with self.subTest(offset=offset), self.assertRaises(ValueError):
+          unpack_image(embedded, startup_offset=offset)
+      with self.assertRaisesRegex(ValueError, "startup extents"):
+        unpack_image(embedded[:-1], startup_offset=0x224)
+
   def test_complete_lzo_extent_is_required(self):
     image = imagefs()
     raw = startup(image)

@@ -57,7 +57,33 @@ In `devc-metermid`:
 
 The eight header bytes are status/error flags, not a timestamp. No mapping from CAN `0x241`, `0x321` or `0x322` to snapshot byte 315 was found in this driver. Who builds that UART snapshot remains upstream of this code and is not established by a UART device name alone.
 
-The boot script `scripts/qnx_early_setup.sh` starts `devc-metermid` and then `MeterCore`. A commented UART line mentions a GMSL connection; that comment is not sufficient to identify the physical peer or wiring.
+The boot script `scripts/qnx_early_setup.sh` starts `devc-metermid` and then `MeterCore`. A commented UART line mentions a GMSL connection; that comment alone is not sufficient to identify the physical peer or wiring. The subsequent hypervisor trace below recovered an active counterpart.
+
+### Active hypervisor setup and the GMSL boundary
+
+The package's `rootfs_hv/hvImage_abl_emmc` also contains a QNX startup/imagefs filesystem, with the startup header embedded at outer-file offset `0x224`. Source SHA256:
+
+```text
+f9bd7d88f279e602041eead68d89d9445da70ab31383c4fa3c5050a2ac2e2875
+```
+
+The published inventory tool now accepts an explicit startup offset, without scanning for guessed headers:
+
+```sh
+python -m scripts.subaru_research.qnx_ifs_inventory rootfs_hv/hvImage_abl_emmc --startup-offset 0x224
+```
+
+On that actual image it decompresses 735 LZO blocks into 48,167,692 bytes, verifies the imagefs word-sum checksum, and inventories 282 regular files. Member offsets below refer to that **decompressed image**, not the outer file or execution addresses.
+
+- `scripts/metermid-setup.sh`, offset `0x4CE7AD`, contains an active launch of PCI `8086:5ABC` as UART `/dev/ser3`, at 921600 baud with DMA. It then waits for the serial device and platform state and runs `gmslSerInit`. The startup-script member at `0x2DED09A` contains the corresponding command record.
+- `gmslSerInit:0xC80` calls the serializer-reset and serializer-initialization routines. These addresses and the remaining library addresses are ELF virtual addresses.
+- `libgmslSerializerLib.so.1:0x1A20` opens `/dev/ser3` and sets 921600 baud. Its register read/write routines at `0x1F20` / `0x2300` use sync `0x79`, a device address, a register address, length 1, and ACK `0xC3`. These are 4/5-byte serializer register requests, **not** the 400-byte meter snapshot protocol.
+- Its initializer at `0x28F0` configures HDMI clock, oLDI/VESA mapping and TMDS HSYNC. Reset routine `0x4100` toggles encoded GPIO `0x40000548`; this does not identify or reset a demonstrated far-end meter MCU in this investigation.
+- `scripts/graphics-setup.sh` associates HDMI-A-2 with `EDID_MET.bin`, separately from HDMI-A-1 and `EDID_CID.bin`.
+
+This is stronger evidence than a commented UART label: the stored active startup configuration and executable serializer routines put UART0 on the meter/display transport path. It does not establish the far-end chip that constructs the 400-byte snapshot. A downstream meter/display controller is a plausible producer, not an identified one. No firmware code was executed or GPIO operation performed during analysis.
+
+MIDDraw independently opens `/dev/MeterCom` at `0x1A5339`. Its automatic-departure names have data-table references at `0x350FB08` and `0x350FB30`, but no producer or enum meanings were recovered from those references. MeterService's ECU-version import and notification string identify a possible identity-reporting surface, not an observed controller identity. SlaveController watchdog/QVM labels were not evidence of the meter MCU.
 
 ## Exact IACC-support chain
 
@@ -94,6 +120,32 @@ eye_auto_departure_pattern
 The automatic-departure names are at `0x3AA9B` and `0x3AAB3`. These are relevant evidence that this multi-variant cockpit software represents automatic-departure information. They do not establish that the 2024 Crosstrek supports that function, that a particular variant transmits it, or that the field is a writable resume request.
 
 No decoder for those names has been promoted into driving code.
+
+### Exact snapshot field positions recovered in the next tracing pass
+
+`sub_319A3` passes the block beginning at snapshot byte 244 to `sub_2FA71`. That writer copies the EyeSight draw bytes into the same packed-state byte positions. The exported getter descriptors then select these exact bits:
+
+| Report field | UART snapshot position | Getter address |
+|---|---|---|
+| `cruiseMainLamp` | byte 246 bit 6 | `0x2A121` |
+| `cruiseSetLamp` | byte 246 bit 7 | `0x2A145` |
+| `setSpeedRaw` | byte 247, eight bits | `0x2A183` |
+| `holdDisplay` | byte 249 bit 4 | `0x2A28A` |
+| `cancelDisplayRaw` | byte 256 bits 0-3 | `0x2A60A` |
+| `automaticDepartureIconRaw` | byte 261 bits 0-2 | `0x2A799` |
+| `automaticDeparturePatternRaw` | byte 261 bit 4 | `0x2A7BA` |
+| `iaccSupport` | byte 315 bit 1 | `0x2B2A6` |
+
+The automatic-departure fields are display values; their enum meanings and actual vehicle support remain unknown. `setSpeedRaw` is deliberately not converted to mph or km/h. `cancelDisplayRaw` is not labeled as a physical Cancel press.
+
+`meter_snapshot_decode.py` now decodes a saved, aligned stream of raw 400-byte UART records or 408-byte `/dev/MeterCom` records. It checks the real firmware checksum, retains the driver error flags, and prints the raw fields plus an explicit unverified-capability boundary. It does not open a device, generate requests, scan for guessed frame boundaries, or treat flags as timestamps.
+
+```sh
+python -m scripts.subaru_research.meter_snapshot_decode saved-meter-uart.bin --format uart400
+python -m scripts.subaru_research.meter_snapshot_decode saved-metercom-records.bin --format metercom408
+```
+
+The decoder's seven tests use synthetic packets with literal wire offsets independent of the decoder table, real temporary-file input, and the actual command-line entry point. They verify bit positions, neighboring-bit isolation, driver-error reporting, checksum failures, truncation/format/alignment errors and device-node rejection. There is no real saved meter-UART capture in the existing dataset, so this is a firmware-derived parser, not a car-verified signal decoder.
 
 ## A real cockpit cruise setting, not a speed/Resume command
 
@@ -137,8 +189,11 @@ The larger latest rlogs are explicitly truncated prefixes (`Corrupted events det
 
 ## Deliverables and next boundary
 
-- `qnx_ifs_inventory.py`: bounded LZO decompression, imagefs checksum/extent validation and exact-path selected extraction. No executable is run and no CAN is emitted.
-- `test_qnx_ifs_inventory.py`: five behavioral tests for real data extents, corruption, traversal and complete compressed input.
+- `qnx_ifs_inventory.py`: bounded LZO decompression, imagefs checksum/extent validation and exact-path selected extraction, now including explicit embedded startup-header offsets. No firmware executable is run and no CAN is emitted.
+- `test_qnx_ifs_inventory.py`: six behavioral tests for file extents, corruption, traversal, complete compressed input and embedded-header addressing. The embedded-image test failed before offset support was added and passes afterward.
+- `meter_snapshot_decode.py` and `test_meter_snapshot_decode.py`: the eight traced receive fields, normal checksum, driver flags and seven synthetic-packet/file/CLI tests. Not vehicle-capture validation.
 - `vcpu_can_inventory.py`: the earlier VCPU TX/RX inventory remains valid and separate from this meter plane.
 
-The next physical observation with the highest information value is a synchronized **receive-only meter-UART + CAN + independently labeled button/ACC/HOLD capture**, after identifying the actual installed hardware variant. That would show whether the serial support/display fields change on this car and where their contents correspond to vehicle traffic. This investigation has reached the upstream snapshot producer, not recovered it.
+Verification for this pass: 31 combined meter-decoder, image-reader, VCPU-inventory and stop-and-go-research tests passed; Ruff passed for the four Python files changed in this pass. The updated reader also passed the actual hypervisor image integrity/inventory check described above, not just synthetic tests.
+
+The missing evidence is now specifically the **far-end meter-controller firmware, explicit board connectivity, or passive controller-version/traffic evidence**. None was found in the bounded producer trace. A synchronized receive-only meter-UART + CAN + independently labeled button/ACC/HOLD capture, after identifying the installed variant, could connect these serial fields to vehicle traffic. The current work recovers the received fields and active display transport, not the upstream snapshot producer or a working automatic-resume command. No driving behavior was changed in this pass.

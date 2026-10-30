@@ -76,7 +76,12 @@ def lzo_block(source):
   return dst.raw[:output_length.value]
 
 
-def unpack_image(raw):
+def unpack_image(raw, startup_offset=0):
+  # Hypervisor images embed the same startup/imagefs format after an outer header. Require its known
+  # offset explicitly rather than guessing magic-byte matches inside compressed or unrelated data.
+  if not 0 <= startup_offset < len(raw):
+    raise ValueError("startup offset outside input")
+  raw = raw[startup_offset:]
   if len(raw) < 256 or raw[:4] != bytes.fromhex("eb7eff00") or raw[6] & 2 or raw[6] & 0x1C != 8:
     raise ValueError("expected a little-endian LZO QNX IFS header")
   start, stored, _, expected = struct.unpack_from("<4I", raw, 32)
@@ -101,19 +106,22 @@ def unpack_image(raw):
   if not terminated or len(image) != expected:
     raise ValueError("incomplete compressed image")
   files = parse_directory(image)
-  return bytes(image), files, {"storedBytes": stored, "imageBytes": expected, "lzoBlocks": blocks,
+  return bytes(image), files, {"startupFileOffset": startup_offset, "storedBytes": stored,
+                                "imageBytes": expected, "lzoBlocks": blocks,
                                 "formatIntegrityPassed": True, "manufacturerAuthenticityEstablished": False}
 
 
 def main():
   parser = argparse.ArgumentParser(description=__doc__)
   parser.add_argument("image", type=Path)
+  parser.add_argument("--startup-offset", type=lambda value: int(value, 0), default=0,
+                      help="known startup-header offset in the input, decimal or 0x-prefixed; no auto-scan")
   parser.add_argument("--extract", nargs="*", default=[], help="exact paths from the image inventory")
   parser.add_argument("--output", type=Path, help="existing output directory; required only with --extract")
   args = parser.parse_args()
   if args.extract and (args.output is None or not args.output.is_dir()):
     parser.error("--extract requires an existing --output directory")
-  image, files, metadata = unpack_image(args.image.read_bytes())
+  image, files, metadata = unpack_image(args.image.read_bytes(), startup_offset=args.startup_offset)
   selected = set(args.extract)
   if selected - {entry.path for entry in files}:
     parser.error("requested path absent from image")
