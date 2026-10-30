@@ -8,6 +8,8 @@ Tracing them establishes that the meter's 400-byte vehicle-state snapshot arrive
 
 This is real additional vehicle-integration firmware, but not an identified EyeSight camera firmware image. It contains labels for EyeSight HOLD, set speed, cancellation and automatic-departure display states. The labels describe received/rendered state, not a proven command to accelerate or resume ACC.
 
+The acquisition follow-up is in `firmware-download-findings.md`: it recovers the actual Linux Red Bend downloader and management-session origin, corrects the earlier DCM-only account, and traces the separate authenticated SSM5 download contract. The meter `.pfc` payload itself has not been acquired.
+
 ## Verified extraction
 
 The source QNX image is a filesystem with a boot sector, not the nonsensical partition map produced by treating boot-code bytes as MBR entries. Its superblock is at `0x2000`, with 4,096-byte blocks. The filesystem holds `basefs.ifs` and `early.ifs`.
