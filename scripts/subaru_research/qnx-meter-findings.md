@@ -187,13 +187,74 @@ The best tested `0x241` raw-active candidate, bit 26, has 167 false positives an
 
 The larger latest rlogs are explicitly truncated prefixes (`Corrupted events detected`); they were not relabeled as complete successful evidence.
 
+## Follow-up: EYE323 labels exposed an actual stock-frame forwarding bug
+
+The next pass followed explicit names such as `eye_eye323_3_6` rather than assuming the snapshot was an opaque dead end. Its getter `MeterCore:0x2A7DE` returns byte 261 bits 6-7, sharing a byte with the automatic-departure fields. Other named anchors include `eye_eye323_1_0` at snapshot byte 255 and `eye_eye323_7_5` at byte 262. These support testing a relationship to CAN `0x323`, but an adjacent signal name does **not** establish that every bit is copied from that CAN byte. No synchronized UART capture establishes that relationship.
+
+The separate physical-CAN receiver `system_setting:0x125820`, table `0x426470`, does explicitly decode `0x323` byte 3 bits 1, 2 and 3, and several customization/status fields in bytes 4-7. Its descriptors are distinct from the meter snapshot getters. Neither reinterpreting CAN byte 3 bits 0-2 nor shifting to bits 1-3 produced a validated automatic-departure decoder: the available captures have no independently labeled positive departure/HOLD examples. The values remain unnamed hypotheses.
+
+Following that same frame through our own implementation found a reproducible data-loss bug: the old `ES_Infotainment` DBC and `create_es_infotainment` sender omitted payload bit 23 and bits 25-63. Repacking the stock camera frame therefore cleared those bits, rather than merely updating its counter and LKAS alert.
+
+An actual camera bus-2 packet from the stock-longitudinal route26 capture reproduces the bug:
+
+```text
+Received camera:  99 01 07 21 40 00 00 0a
+Old replacement:  2f 01 07 01 00 00 00 00
+Fixed replacement with the same counter and no alert override:
+                 99 01 07 21 40 00 00 0a
+```
+
+The owning fix adds two unnamed passthrough signals for those uncovered bit ranges in `_subaru_global.dbc` and carries them through `create_es_infotainment`. The existing alert filter and rolling-counter behavior are unchanged. No new signal meaning, button event, longitudinal command, CAN address or transmit permission was introduced. This is a stock-status compatibility fix, not automatic-resume activation.
+
+Verification:
+
+- The recorded-packet regression failed on the original sender for the right byte-for-byte mismatch and passes after the fix.
+- Four regression tests cover the captured packet, every preserved payload bit, all existing alert values and overrides, counter wrapping, checksums, and the actual warmed CarInterface -> CarState -> CarController replacement path. Both DBC variants importing `_subaru_global.dbc` are covered.
+- All **6,666 camera bus-2 frames** from the six complete routes / 13 files passed exact-byte replay through the actual parser and fixed sender, allowing only the existing alert edits. Of these, 6,660 contained bits omitted by the old representation. The stock-long subset accounts for 1,870 of these frames; replacement-long routes remain separate evidence of payload preservation, not stock cruise capability.
+- The two previously incomplete prefixes remain incomplete. The replay CLI returns failure for a corrupted prefix even if its recovered frames pass payload preservation; it does not turn prefix success into whole-log validation.
+- The full opendbc suite ran **9,664 tests, with 1,270 skipped and no failures**. Ruff and configured type checks passed for the changed controller/test files. This is offline verification, not a vehicle road test.
+
+Reproduce with saved local rlogs only:
+
+```sh
+python -m scripts.subaru_research.replay_infotainment saved-route--0-rlog.zst saved-route--1-rlog.zst
+```
+
+The command reads camera bus 2 only, keeps its source counter for comparison, invokes the actual HUD sender without sending its output, and reports checksum/parser/payload failures plus log corruption. It never opens Panda or a CAN device.
+
+### Renderer trace does not yet provide enum meanings
+
+MIDDraw's bindings write the two PPS integers unchanged to draw-info offsets `0xFEC` and `0xFF0` from base `0x3F1CB00` (DWORD indexes 1019 and 1020). `0x1A7169` decodes `/pps/pps_meter?wait,delta`, and `0x1A72CB` stores through the binding's destination pointer. Both entries have startup default zero; that alone does not mean disabled, hidden, waiting or ready.
+
+A bounded trace of the relevant renderer callbacks did not recover a read from those two fields reaching an asset/text decision. Nearby fields at offsets `0xFF8` and `0xFFC` are demonstrably read by `0x1872E5`, so the trace distinguishes actual reads from binding-table references. Computed indexing remains a possible unresolved path; this is not a claim of whole-program nonuse or an enum decoder.
+
+### Exact combination-meter firmware acquisition target recovered
+
+A separate primary-source check found Subaru bulletin **15-323-25R**, issued March 17, 2025 and revised March 27, 2025. Its page-2 table explicitly lists the 2024 Impreza/Crosstrek combination-meter update as `MET_CH2_CH2RCB0001.pfc`, changing CID/ROM ID `7000000301` to `7000000401`, for the listed `85132FN...` meter part numbers. The table was checked visually against the PDF, not only search snippets. Page 3 identifies SSM5-R as the update route.
+
+This is a concrete meter-image acquisition target distinct from the CCU ZIP and its `LOADING_CID.KWI` center-display files. The bulletin concerns incorrect fuel-economy display values; it does not document automatic resume. Neither that PFC payload nor a match to the installed meter was recovered. It also does not prove that this meter builds the inspected GMSL snapshot; that still needs firmware or wiring evidence.
+
+Subaru bulletin **07-226-24**, March 18, 2024, separately identifies EyeSight camera calibration/software IDs `1B21080044 / 112108013B` for 2024 Impreza/Crosstrek. This identifies a camera-software family, not a downloaded camera image or a resume-capability change. The bulletin concerns fan/temporary-halt faults, not stop-and-go.
+
+Primary document locations reviewed:
+
+```text
+Subaru 15-323-25R, pp. 1-3 (manufacturer bulletin archived by OEMDTC):
+https://static.oemdtc.com/NHTSA-PDFs/MC-11016180-0001.pdf
+Subaru 07-226-24, pp. 1-3 (NHTSA archive):
+https://static.nhtsa.gov/odi/tsbs/2024/MC-10252461-0001.pdf
+```
+
+No vehicle query, download from an authenticated firmware service, reprogramming or flashing was performed.
+
 ## Deliverables and next boundary
 
 - `qnx_ifs_inventory.py`: bounded LZO decompression, imagefs checksum/extent validation and exact-path selected extraction, now including explicit embedded startup-header offsets. No firmware executable is run and no CAN is emitted.
 - `test_qnx_ifs_inventory.py`: six behavioral tests for file extents, corruption, traversal, complete compressed input and embedded-header addressing. The embedded-image test failed before offset support was added and passes afterward.
 - `meter_snapshot_decode.py` and `test_meter_snapshot_decode.py`: the eight traced receive fields, normal checksum, driver flags and seven synthetic-packet/file/CLI tests. Not vehicle-capture validation.
 - `vcpu_can_inventory.py`: the earlier VCPU TX/RX inventory remains valid and separate from this meter plane.
+- `replay_infotainment.py`: receive-only local-rlog replay of the actual `0x323` parser/sender, including explicit rejection of incomplete evidence.
 
-Verification for this pass: 31 combined meter-decoder, image-reader, VCPU-inventory and stop-and-go-research tests passed; Ruff passed for the four Python files changed in this pass. The updated reader also passed the actual hypervisor image integrity/inventory check described above, not just synthetic tests.
+Verification for the snapshot/IFS pass: 31 combined meter-decoder, image-reader, VCPU-inventory and stop-and-go-research tests passed; Ruff passed for the four Python files changed in this pass. The updated reader also passed the actual hypervisor image integrity/inventory check described above, not just synthetic tests.
 
-The missing evidence is now specifically the **far-end meter-controller firmware, explicit board connectivity, or passive controller-version/traffic evidence**. None was found in the bounded producer trace. A synchronized receive-only meter-UART + CAN + independently labeled button/ACC/HOLD capture, after identifying the installed variant, could connect these serial fields to vehicle traffic. The current work recovers the received fields and active display transport, not the upstream snapshot producer or a working automatic-resume command. No driving behavior was changed in this pass.
+The missing evidence is now specifically the **far-end meter-controller firmware, explicit board connectivity, or passive controller-version/traffic evidence**. None was found in the bounded producer trace. A synchronized receive-only meter-UART + CAN + independently labeled button/ACC/HOLD capture, after identifying the installed variant, could connect these serial fields to vehicle traffic. The work recovers the received fields and active display transport, not the upstream snapshot producer or a working automatic-resume command. The subsequent CAN fix preserves stock HUD/status payload bits; it does not change throttle, brake or steering commands.
